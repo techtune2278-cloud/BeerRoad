@@ -1,4 +1,4 @@
-# La Beer Road — V4 : connexion par lien e-mail et accès Drive
+# La Beer Road — V6 : version visible et statut de connexion en haut de page
 
 ## Ce que contient cette version
 
@@ -139,3 +139,18 @@ Le site restaure la session enregistrée dans `localStorage`. Pendant cette vér
 
 Un nouvel e-mail peut être nécessaire après une déconnexion volontaire, l'effacement des données du navigateur, l'utilisation d'un autre navigateur/appareil ou la révocation de la session par Supabase. Les jetons sont stockés dans le navigateur et rafraîchis lorsqu'ils arrivent à expiration. Les autorisations d'accès aux données restent contrôlées côté Supabase.
 
+
+
+## V6 — Version affichée et statut de connexion
+
+La page d'accueil affiche maintenant en haut à gauche le numéro **Version 6.0** et l'état de connexion du navigateur :
+
+- pendant la restauration : « Vérification de la connexion… » ;
+- sans session active : « Pas de membre connecté dans ce navigateur. » ;
+- après connexion : « [Prénom] connecté » et, sur les écrans assez larges, l'adresse e-mail associée.
+
+Le bouton **Drive familial** a été retiré de l'en-tête afin de ne pas encombrer le haut de la page. Les liens Google Drive restent disponibles dans les univers qui concernent les ressources correspondantes.
+
+### Si Supabase affiche « email rate limit exceeded »
+
+La V6 remplace ce message technique par une explication en français : le service e-mail intégré de Supabase est limité à **2 messages par heure** actuellement. Il ne faut pas recliquer plusieurs fois ; un lien reçu précédemment peut encore fonctionner. Pour une utilisation familiale régulière, configure un serveur SMTP personnalisé dans Supabase → Authentication → SMTP Settings. Cette limite est imposée par le service d'authentification, pas par le site. Documentation officielle : https://supabase.com/docs/guides/auth/auth-smtp et https://supabase.com/docs/guides/auth/rate-limits.

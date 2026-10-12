@@ -97,7 +97,10 @@ function mediaIcon(kind: string) {
   return <FileText className="size-4" />
 }
 
-export function CommunityHub({ contributionRequest }: { contributionRequest: { universe: Universe; section: string; target: "carnet" | "agenda"; nonce: number } }) {
+type AuthStatus = { status: "checking" | "connected" | "disconnected"; label: string; email?: string }
+type ContributionRequest = { universe: Universe; section: string; target: "carnet" | "agenda"; nonce: number }
+
+export function CommunityHub({ contributionRequest, onAuthStatusChange }: { contributionRequest: ContributionRequest; onAuthStatusChange?: (status: AuthStatus) => void }) {
   const configured = isSupabaseConfigured()
   const [tab, setTab] = useState<HubTab>("carnet")
   const [session, setSession] = useState<FamilySession | null>(null)
@@ -129,6 +132,17 @@ export function CommunityHub({ contributionRequest }: { contributionRequest: { u
   const [eventDetails, setEventDetails] = useState("")
   const [eventType, setEventType] = useState<EventType>("sejour")
   const formFocusRequest = useRef(0)
+
+  useEffect(() => {
+    if (!onAuthStatusChange) return
+    if (authChecking) {
+      onAuthStatusChange({ status: "checking", label: "Vérification de la connexion…" })
+    } else if (session && member) {
+      onAuthStatusChange({ status: "connected", label: `${member.display_name} connecté`, email: session.user.email })
+    } else {
+      onAuthStatusChange({ status: "disconnected", label: "Pas de membre connecté dans ce navigateur." })
+    }
+  }, [authChecking, configured, session, member, onAuthStatusChange])
 
   useEffect(() => {
     if (contributionRequest.nonce === 0 || formFocusRequest.current === contributionRequest.nonce) return
@@ -225,7 +239,12 @@ export function CommunityHub({ contributionRequest }: { contributionRequest: { u
       setAuthStage("sent")
       setNotice(`Le courriel a été envoyé à ${email.trim()}. Ouvre-le et clique sur le lien du message (souvent « Confirmer votre email » lors de la première connexion). Aucun code n’est à saisir.`)
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Impossible d'envoyer l'e-mail de connexion.")
+      const rawMessage = err instanceof Error ? err.message : "Impossible d'envoyer l'e-mail de connexion."
+      if (/email rate limit exceeded|rate limit|too many requests|429/i.test(rawMessage)) {
+        setError("Le service e-mail de test de Supabase a atteint sa limite d’envoi (actuellement 2 messages par heure avec le fournisseur intégré). Ne reclique pas plusieurs fois : essaie d’abord le lien déjà reçu. Si tu n’as plus de lien utilisable, attends que la limite se réinitialise. Pour un usage familial régulier, l’administrateur devra configurer un serveur SMTP personnalisé dans Supabase.")
+      } else {
+        setError(rawMessage)
+      }
     } finally {
       setAuthBusy(false)
     }

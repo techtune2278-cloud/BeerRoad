@@ -1,13 +1,14 @@
 "use client"
 
-import { useMemo, useRef, useState } from "react"
+import { useCallback, useMemo, useRef, useState } from "react"
 import Image from "next/image"
 import {
   ArrowDown,
   CalendarDays,
   Compass,
   Footprints,
-  ExternalLink,
+  CircleUserRound,
+  LoaderCircle,
   Search,
   Volume2,
   VolumeX,
@@ -25,7 +26,15 @@ function searchText(plaque: Plaque) {
   return parts.join(" ").toLocaleLowerCase("fr-FR")
 }
 
+type AuthStatus = { status: "checking" | "connected" | "disconnected"; label: string; email?: string }
+
+const SITE_VERSION = "6.0"
+
 export function BeerRoad() {
+  const [authStatus, setAuthStatus] = useState<AuthStatus>({ status: "checking", label: "Vérification de la connexion…" })
+  const handleAuthStatusChange = useCallback((nextStatus: AuthStatus) => {
+    setAuthStatus(nextStatus)
+  }, [])
   const [active, setActive] = useState<Plaque | null>(null)
   const [query, setQuery] = useState("")
   const [isPlaying, setIsPlaying] = useState(false)
@@ -69,14 +78,23 @@ export function BeerRoad() {
       <audio ref={audioRef} src="/ambiance.mp3" loop />
 
       <header className="mx-auto flex max-w-4xl flex-col items-center gap-4 text-center">
-        <div className="flex w-full justify-end gap-2">
+        <div className="flex w-full flex-wrap items-center justify-between gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="inline-flex items-center rounded-full border border-border bg-card/90 px-3 py-2 text-xs font-semibold text-muted-foreground">Version {SITE_VERSION}</span>
+            <span role="status" aria-live="polite" className={`inline-flex min-h-9 items-center gap-2 rounded-full border px-3 py-2 text-xs font-semibold ${authStatus.status === "connected" ? "border-emerald-600/25 bg-emerald-600/10 text-emerald-800 dark:text-emerald-300" : "border-border bg-card/90 text-muted-foreground"}`}>
+              {authStatus.status === "checking" ? <LoaderCircle className="size-3.5 animate-spin" aria-hidden="true" /> : <CircleUserRound className="size-3.5" aria-hidden="true" />}
+              <span>{authStatus.label}</span>
+              {authStatus.status === "connected" && authStatus.email && <span className="hidden md:inline font-normal">· {authStatus.email}</span>}
+            </span>
+          </div>
+          <div className="flex flex-wrap items-center justify-end gap-2">
           <button onClick={toggleAudio} title={isPlaying ? "Couper l'ambiance" : "Écouter l'ambiance de la Beer Road"} className="inline-flex items-center justify-center gap-2 rounded-full border border-border bg-card/90 px-3 py-2 text-xs font-semibold shadow-sm transition hover:bg-secondary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary">
             {isPlaying ? <Volume2 className="size-4 animate-pulse text-primary" /> : <VolumeX className="size-4 text-muted-foreground" />}
             <span className="hidden sm:inline">{isPlaying ? "Ambiance ON" : "Ambiance"}</span>
           </button>
-          {siteMeta.driveFolderUrl && <a href={siteMeta.driveFolderUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center gap-2 rounded-full border border-border bg-card/90 px-3 py-2 text-xs font-semibold shadow-sm transition hover:bg-secondary"><ExternalLink className="size-4" /> Drive familial</a>}
           <button type="button" onClick={handleOpenAgenda} className="inline-flex items-center justify-center gap-2 rounded-full border border-border bg-card/90 px-3 py-2 text-xs font-semibold shadow-sm transition hover:bg-secondary"><CalendarDays className="size-4" /> Agenda familial</button>
           <button type="button" onClick={() => handleContribute("legendes")} className="inline-flex items-center justify-center gap-2 rounded-full bg-primary px-4 py-2 text-xs font-semibold text-primary-foreground shadow-sm transition hover:opacity-90"><Footprints className="size-4" /> Participer</button>
+          </div>
         </div>
 
         <p className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.2em] text-primary"><Compass className="size-3.5" /> Le patrimoine commun de la tribu</p>
@@ -127,7 +145,7 @@ export function BeerRoad() {
       </section>
 
       <section className="mx-auto mt-12 max-w-6xl" aria-label="Participation familiale">
-        <CommunityHub contributionRequest={communityRequest} />
+        <CommunityHub contributionRequest={communityRequest} onAuthStatusChange={handleAuthStatusChange} />
       </section>
 
       <footer className="mx-auto mt-8 flex max-w-6xl flex-col items-center justify-between gap-3 border-t border-border px-1 pt-5 text-center sm:flex-row sm:text-left">
