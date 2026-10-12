@@ -18,6 +18,7 @@ create table if not exists public.community_posts (
   author_email text not null,
   author_name text not null,
   universe_slug text not null check (universe_slug in ('origines','transmission','atelier','grenier','kerhuon','legendes','avenir')),
+  section_label text not null default 'Contributions générales',
   title text not null check (length(trim(title)) between 1 and 140),
   body text,
   media_path text,
@@ -27,6 +28,7 @@ create table if not exists public.community_posts (
 
 -- Compatible avec un projet sur lequel le schéma précédent aurait déjà été appliqué.
 alter table public.community_posts add column if not exists external_url text;
+alter table public.community_posts add column if not exists section_label text not null default 'Contributions générales';
 
 do $$
 begin

@@ -4,7 +4,7 @@
 
 La page d'accueil conserve la photo du chemin de Ker Huon et ses sept empreintes. L'ordre physique est maintenant **du bas vers le haut** : 1. La Bobine des origines, 2. Les Mots qui restent, 3. L'Atelier des possibles, 4. Le Grenier d'Elwood, 5. La Maison apprivoisée, 6. Le Cabinet des légendes, 7. La Route des lendemains.
 
-Chaque fiche présente des textes et un bloc **Accès et ressources**. Les liens déjà renseignés sont cliquables ; les autres portent clairement la mention **URL à ajouter**. Les boutons « Ajouter au… » ouvrent le carnet sur le bon univers, sélectionnent cet univers et filtrent les contributions pour éviter que la publication soit perdue dans un carnet indistinct. Le bouton de La Route des lendemains ouvre directement l'agenda.
+Chaque fiche présente des textes et un bloc **Accès et ressources**. Les liens renseignés s'ouvrent directement. Les liens encore inconnus proposent désormais un bouton **Ajouter le lien** qui prépare une contribution classée dans l'univers et la rubrique précis. Les blocs thématiques sont eux aussi cliquables : un clic ouvre le formulaire, pré-sélectionne la bonne rubrique et propose son nom comme titre. L'agenda dispose d'un bouton dans l'en-tête et dans le dernier univers, même si la connexion n'est pas encore faite.
 
 ## Où modifier les contenus et les libellés des univers
 
@@ -20,7 +20,8 @@ Dans ce fichier, chaque bloc `id: "origines"`, `id: "transmission"`, etc. contie
 - `content.video.embedUrl` : l'URL d'intégration vidéo, par exemple une URL YouTube de type `https://www.youtube.com/embed/ID_VIDEO` ;
 - `content.albums` : pochette, titre, description et ressources d'un album ;
 - `content.books` : titres, description, couverture et PDF des livres ;
-- `content.links` : les raccourcis affichés dans « Accès et ressources ».
+- `content.links` : les raccourcis affichés dans « Accès et ressources ». Quand `url` est renseignée, le raccourci ouvre directement la ressource. Sans `url`, le bouton **Ajouter le lien** prépare une contribution à cette rubrique.
+- `siteMeta.driveFolderUrl` : colle ici l'URL de partage du dossier racine **Beer Road** sur Google Drive. Il faut copier le lien du dossier depuis Drive ; l'adresse du compte ou le nom du dossier ne permet pas de fabriquer son URL. Une fois renseignée, la fiche propose un bouton commun pour ouvrir ce dossier. Pour un accès direct à un film, un livre ou un album, renseigne plutôt son URL propre dans `content.links`.
 
 Pour rendre un raccourci actif, ajoute sa vraie URL au champ `url`. Exemple :
 
@@ -77,10 +78,23 @@ Pourquoi autoriser ces URL ? Le lien reçu par e-mail doit savoir vers quel site
 
 ## Installer/configurer le projet
 
-1. Ouvre `supabase/schema.sql`, relis le bloc des neuf adresses et exécute le script dans Supabase → **SQL Editor**. Il crée les tables, les règles d'accès et le bucket privé. Si le schéma avait déjà été appliqué, le script ajoute aussi les colonnes `external_url` et `event_type` sans recréer les tables.
+1. Ouvre `supabase/schema.sql`, relis le bloc des neuf adresses et exécute le script dans Supabase → **SQL Editor**. Il crée les tables, les règles d'accès et le bucket privé. Si le schéma avait déjà été appliqué, le script ajoute aussi les colonnes `external_url`, `section_label` et `event_type` sans recréer les tables. Il faut donc exécuter cette version à jour pour que le carnet classe les publications dans une sous-rubrique.
 2. Copie `.env.example` en `.env.local` sur ton ordinateur et renseigne `NEXT_PUBLIC_SUPABASE_URL` et `NEXT_PUBLIC_SUPABASE_ANON_KEY` à partir des paramètres API de ton projet Supabase. La clé `service_role` ne doit jamais être ajoutée au navigateur ni à une variable `NEXT_PUBLIC_…`.
 3. Dans Vercel → projet Beer Road → **Settings → Environment Variables**, ajoute les mêmes deux variables, puis redéploie.
 4. Vérifie un login avec l'une des neuf adresses, une publication test (texte puis lien média), et l'ajout/modification/suppression d'un événement de test.
+
+Si le navigateur tente d'appeler `votre-projet.supabase.co`, les variables d'environnement contiennent encore l'adresse d'exemple. Le code corrigé reconnaît ce cas et n'envoie plus de requête à ce domaine fictif. Dans Vercel, copie les valeurs réelles depuis Supabase → Project Settings → API, enregistre-les puis redéploie. Le message d'erreur que tu as copié contient aussi `redirect_to=http://localhost:3000` : cela indique que cette tentative a été faite depuis une page ouverte en local sur ton ordinateur. Depuis la version Vercel, le paramètre doit contenir le domaine Vercel du site. Ces deux sujets sont distincts de la 404 éventuelle de la page d'accueil.
+
+### Si Vercel affiche une page 404
+
+Le projet comprend `app/page.tsx` à la racine : la route d'accueil `/` existe. Dans Vercel → Project → Settings → Build and Deployment, vérifie :
+
+- **Framework Preset** : Next.js ;
+- **Root Directory** : `./` si `package.json` et le dossier `app/` sont à la racine du dépôt ; sinon le chemin exact vers le dossier qui contient ces deux éléments ;
+- **Build Command** : laisse la valeur Next.js par défaut ou `npm run build` ;
+- **Output Directory** : laisse la valeur par défaut de Next.js, sans saisir `public` ou `out`.
+
+Le fichier `vercel.json` du projet déclare maintenant le framework Next.js, mais ne peut pas corriger un Root Directory configuré vers un mauvais dossier. Consulte aussi le journal Build du dernier déploiement : il doit afficher la route `/`. En cas de doute, ouvre l'URL du déploiement attribuée par Vercel et non une URL d'ancienne preview.
 
 ## Comment fonctionne l'agenda actuellement
 

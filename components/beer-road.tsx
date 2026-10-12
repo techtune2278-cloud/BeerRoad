@@ -1,10 +1,10 @@
 "use client"
 
-import { useEffect, useMemo, useRef, useState } from "react"
+import { useMemo, useRef, useState } from "react"
 import Image from "next/image"
 import {
   ArrowDown,
-  CheckCircle2,
+  CalendarDays,
   Compass,
   Footprints,
   Search,
@@ -14,8 +14,6 @@ import {
 import { plaques, siteMeta, type Plaque, type Universe } from "@/src/data/beerRoadData"
 import { PlaqueModal } from "@/components/plaque-modal"
 import { CommunityHub } from "@/components/community-hub"
-
-const VISITED_KEY = "beerroad-visited-universes-v2"
 
 function searchText(plaque: Plaque) {
   const parts = [plaque.name, plaque.tagline, plaque.universe]
@@ -30,43 +28,23 @@ export function BeerRoad() {
   const [active, setActive] = useState<Plaque | null>(null)
   const [query, setQuery] = useState("")
   const [isPlaying, setIsPlaying] = useState(false)
-  const [visitedIds, setVisitedIds] = useState<Set<string>>(new Set())
-  const [visitStateReady, setVisitStateReady] = useState(false)
-  const [communityRequest, setCommunityRequest] = useState<{ universe: Universe; target: "carnet" | "agenda"; nonce: number }>({ universe: "legendes", target: "carnet", nonce: 0 })
+  const [communityRequest, setCommunityRequest] = useState<{ universe: Universe; section: string; target: "carnet" | "agenda"; nonce: number }>({ universe: "legendes", section: "Contributions générales", target: "carnet", nonce: 0 })
   const audioRef = useRef<HTMLAudioElement | null>(null)
-
-  useEffect(() => {
-    try {
-      const saved = window.localStorage.getItem(VISITED_KEY)
-      if (saved) setVisitedIds(new Set(JSON.parse(saved) as string[]))
-    } catch {
-      // La navigation reste utilisable même si le stockage local est indisponible.
-    } finally {
-      setVisitStateReady(true)
-    }
-  }, [])
-
-  useEffect(() => {
-    if (visitStateReady) window.localStorage.setItem(VISITED_KEY, JSON.stringify([...visitedIds]))
-  }, [visitedIds, visitStateReady])
 
   const trimmedQuery = query.trim().toLocaleLowerCase("fr-FR")
   const matches = useMemo(() => trimmedQuery ? plaques.filter((plaque) => searchText(plaque).includes(trimmedQuery)) : [], [trimmedQuery])
   const matchIds = useMemo(() => new Set(matches.map((plaque) => plaque.id)), [matches])
-  const allVisited = visitedIds.size >= plaques.length
-
   const handleOpenPlaque = (plaque: Plaque) => {
     setActive(plaque)
-    setVisitedIds((previous) => new Set(previous).add(plaque.id))
   }
 
-  const handleContribute = (universe: Universe) => {
-    setCommunityRequest((previous) => ({ universe, target: "carnet", nonce: previous.nonce + 1 }))
+  const handleContribute = (universe: Universe, section = "Contributions générales") => {
+    setCommunityRequest((previous) => ({ universe, section, target: "carnet", nonce: previous.nonce + 1 }))
     setActive(null)
   }
 
   const handleOpenAgenda = () => {
-    setCommunityRequest((previous) => ({ universe: "avenir", target: "agenda", nonce: previous.nonce + 1 }))
+    setCommunityRequest((previous) => ({ universe: "avenir", section: "Agenda familial", target: "agenda", nonce: previous.nonce + 1 }))
     setActive(null)
   }
 
@@ -95,7 +73,8 @@ export function BeerRoad() {
             {isPlaying ? <Volume2 className="size-4 animate-pulse text-primary" /> : <VolumeX className="size-4 text-muted-foreground" />}
             <span className="hidden sm:inline">{isPlaying ? "Ambiance ON" : "Ambiance"}</span>
           </button>
-          <a href="#carnet" className="inline-flex items-center justify-center gap-2 rounded-full bg-primary px-4 py-2 text-xs font-semibold text-primary-foreground shadow-sm transition hover:opacity-90"><Footprints className="size-4" /> Participer</a>
+          <button type="button" onClick={handleOpenAgenda} className="inline-flex items-center justify-center gap-2 rounded-full border border-border bg-card/90 px-3 py-2 text-xs font-semibold shadow-sm transition hover:bg-secondary"><CalendarDays className="size-4" /> Agenda familial</button>
+          <button type="button" onClick={() => handleContribute("legendes")} className="inline-flex items-center justify-center gap-2 rounded-full bg-primary px-4 py-2 text-xs font-semibold text-primary-foreground shadow-sm transition hover:opacity-90"><Footprints className="size-4" /> Participer</button>
         </div>
 
         <p className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.2em] text-primary"><Compass className="size-3.5" /> Le patrimoine commun de la tribu</p>
@@ -112,17 +91,16 @@ export function BeerRoad() {
 
       <section className="mx-auto mt-8 grid max-w-6xl items-start gap-6 lg:mt-10 lg:grid-cols-[minmax(0,1.08fr)_minmax(320px,0.92fr)] lg:gap-8" aria-label="Les sept univers de la Beer Road">
         <div className="mx-auto w-full max-w-[650px]">
-          <div className="mb-3 flex items-center justify-between gap-3 px-1"><div><p className="font-serif text-xl font-semibold">Le chemin des sept pas</p><p className="mt-0.5 text-xs text-muted-foreground">Clique sur une empreinte pour ouvrir son univers.</p></div><span className="rounded-full border border-border bg-card px-3 py-1 text-xs font-semibold">{visitedIds.size}/{plaques.length} explorés</span></div>
+          <div className="mb-3 flex items-center justify-between gap-3 px-1"><div><p className="font-serif text-xl font-semibold">Le chemin des sept pas</p><p className="mt-0.5 text-xs text-muted-foreground">Clique sur une empreinte pour ouvrir son univers.</p></div></div>
           <div className="relative aspect-[3/4] w-full overflow-hidden rounded-[2rem] border border-border bg-muted shadow-xl">
             <Image src={siteMeta.heroImage} alt="Les empreintes du chemin de la Beer Road dans le jardin de Ker Huon" fill priority sizes="(max-width: 1024px) 100vw, 55vw" className="select-none object-cover" />
             <div aria-hidden="true" className="pointer-events-none absolute inset-0 bg-gradient-to-b from-foreground/5 via-transparent to-foreground/10" />
             {plaques.map((plaque, index) => {
               const dimmed = trimmedQuery.length > 0 && !matchIds.has(plaque.id)
               const highlighted = trimmedQuery.length > 0 && matchIds.has(plaque.id)
-              const visited = visitedIds.has(plaque.id)
               return <button key={plaque.id} onClick={() => handleOpenPlaque(plaque)} aria-label={`${plaque.name} — ${plaque.tagline}`} className="group absolute rounded-xl outline-none transition-all duration-300 focus-visible:ring-2 focus-visible:ring-primary" style={{ left: `${plaque.position.x}%`, top: `${plaque.position.y}%`, width: `${plaque.position.width}%`, height: `${plaque.position.height}%`, transform: `translate(-50%, -50%) rotate(${plaque.position.rotate ?? 0}deg)`, opacity: dimmed ? 0.38 : 1 }}>
-                <span aria-hidden="true" className={`absolute inset-0 rounded-xl border-2 transition-all duration-300 ${highlighted ? "border-accent shadow-[0_0_0_4px_var(--color-accent)] opacity-100" : visited ? "border-emerald-500/90 shadow-[0_0_0_3px_rgba(16,185,129,0.18)] opacity-100" : "border-accent opacity-0 shadow-[0_0_18px_2px_var(--color-accent)] group-hover:opacity-100 group-focus-visible:opacity-100"}`} />
-                <span className={`pointer-events-none absolute -right-1 -top-2 flex size-6 items-center justify-center rounded-full border border-background text-[10px] font-bold shadow-sm transition-opacity ${visited ? "bg-emerald-600 text-white opacity-100" : highlighted ? "bg-accent text-accent-foreground opacity-100" : "bg-card/90 text-foreground opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100"}`}>{visited ? <CheckCircle2 className="size-3.5" /> : index + 1}</span>
+                <span aria-hidden="true" className={`absolute inset-0 rounded-xl border-2 transition-all duration-300 ${highlighted ? "border-accent shadow-[0_0_0_4px_var(--color-accent)] opacity-100" : "border-accent opacity-0 shadow-[0_0_18px_2px_var(--color-accent)] group-hover:opacity-100 group-focus-visible:opacity-100"}`} />
+                <span className={`pointer-events-none absolute -right-1 -top-2 flex size-6 items-center justify-center rounded-full border border-background bg-card/90 text-foreground text-[10px] font-bold shadow-sm transition-opacity ${highlighted ? "bg-accent text-accent-foreground opacity-100" : "opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100"}`}>{index + 1}</span>
                 <span className={`pointer-events-none absolute left-1/2 top-0 z-10 -translate-x-1/2 -translate-y-[115%] whitespace-nowrap rounded-full bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground shadow-md transition-opacity ${highlighted ? "opacity-100" : "opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100"}`}>{plaque.emoji} {plaque.name}</span>
               </button>
             })}
@@ -134,11 +112,10 @@ export function BeerRoad() {
           <div className="mb-3"><p className="font-serif text-xl font-semibold">Choisir son passage</p><p className="mt-0.5 text-xs text-muted-foreground">Des noms un peu mystérieux, des contenus bien concrets.</p></div>
           <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-1">
             {plaques.map((plaque, index) => {
-              const visited = visitedIds.has(plaque.id)
               const highlighted = trimmedQuery.length > 0 && matchIds.has(plaque.id)
               return <button key={plaque.id} onClick={() => handleOpenPlaque(plaque)} className={`group flex items-start gap-3 rounded-2xl border p-3.5 text-left transition-all hover:-translate-y-0.5 hover:shadow-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${highlighted ? "border-accent bg-accent/10" : "border-border bg-card/80 hover:border-primary/35 hover:bg-card"}`}>
                 <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-secondary text-xl transition-colors group-hover:bg-primary/10">{plaque.emoji}</span>
-                <span className="min-w-0 flex-1"><span className="flex items-center gap-2"><span className="font-serif text-base font-semibold leading-tight">{plaque.name}</span>{visited && <CheckCircle2 className="size-4 shrink-0 text-emerald-600" />}</span><span className="mt-1 block text-xs leading-relaxed text-muted-foreground">{plaque.tagline}</span></span>
+                <span className="min-w-0 flex-1"><span className="flex items-center gap-2"><span className="font-serif text-base font-semibold leading-tight">{plaque.name}</span></span><span className="mt-1 block text-xs leading-relaxed text-muted-foreground">{plaque.tagline}</span></span>
                 <span className="pt-1 text-xs font-semibold text-muted-foreground">0{index + 1}</span>
               </button>
             })}
@@ -153,7 +130,6 @@ export function BeerRoad() {
 
       <footer className="mx-auto mt-8 flex max-w-6xl flex-col items-center justify-between gap-3 border-t border-border px-1 pt-5 text-center sm:flex-row sm:text-left">
         <p className="text-xs leading-relaxed text-muted-foreground">La Beer Road · Ker Huon, Runan · Un chemin qui se prolonge de génération en génération.</p>
-        <div className="flex items-center gap-2 rounded-full border border-border bg-card px-3 py-1.5 text-xs font-medium"><span>👣</span>{allVisited ? <span className="font-semibold text-emerald-600">Les sept univers ont été explorés !</span> : <span><strong className="text-primary">{visitedIds.size}</strong> univers exploré{visitedIds.size > 1 ? "s" : ""} sur {plaques.length}</span>}</div>
       </footer>
 
       {active && <PlaqueModal plaque={active} onClose={() => setActive(null)} onContribute={handleContribute} onOpenAgenda={handleOpenAgenda} />}

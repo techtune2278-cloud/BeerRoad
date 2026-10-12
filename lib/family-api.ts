@@ -18,6 +18,7 @@ export type CommunityPost = {
   author_email: string
   author_name: string
   universe_slug: Universe
+  section_label: string
   title: string
   body: string | null
   media_path: string | null
@@ -44,6 +45,16 @@ export function getSupabaseConfig(): SupabaseConfig | null {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim().replace(/\/$/, "")
   const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim()
   if (!url || !anonKey) return null
+  // Évite d'envoyer des requêtes à l'URL d'exemple du fichier .env.example.
+  const placeholderPattern = /votre[-_ ]?projet|your[-_ ]?project|remplacer|example|cle_anon|anon_key/i
+  if (placeholderPattern.test(url) || placeholderPattern.test(anonKey)) return null
+  try {
+    const parsed = new URL(url)
+    if (!['https:', 'http:'].includes(parsed.protocol)) return null
+    if (parsed.hostname === 'supabase.co' || parsed.hostname.endsWith('.example.com')) return null
+  } catch {
+    return null
+  }
   return { url, anonKey }
 }
 
@@ -85,11 +96,16 @@ async function readError(response: Response): Promise<string> {
 async function requestPublicAuth<T>(path: string, body: unknown): Promise<T> {
   const config = getSupabaseConfig()
   if (!config) throw new Error("L'espace partagé n'est pas encore configuré. Il faut ajouter les deux variables Supabase dans Vercel.")
-  const response = await fetch(`${config.url}${path}`, {
-    method: "POST",
-    headers: { apikey: config.anonKey, "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  })
+  let response: Response
+  try {
+    response = await fetch(`${config.url}${path}`, {
+      method: "POST",
+      headers: { apikey: config.anonKey, "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    })
+  } catch {
+    throw new Error("Impossible de joindre le projet Supabase. Vérifie NEXT_PUBLIC_SUPABASE_URL dans les variables Vercel (Settings → Environment Variables), puis redéploie.")
+  }
   if (!response.ok) throw new Error(await readError(response))
   return (await response.json()) as T
 }
@@ -221,7 +237,7 @@ export async function getFamilyMember(email: string): Promise<FamilyMember | nul
 }
 
 export async function listCommunityPosts(): Promise<CommunityPost[]> {
-  const query = new URLSearchParams({ select: "id,created_at,author_email,author_name,universe_slug,title,body,media_path,media_type,external_url", order: "created_at.desc", limit: "60" })
+  const query = new URLSearchParams({ select: "id,created_at,author_email,author_name,universe_slug,section_label,title,body,media_path,media_type,external_url", order: "created_at.desc", limit: "60" })
   const posts = await familyRequest<CommunityPost[]>(`/rest/v1/community_posts?${query.toString()}`)
   return Promise.all(posts.map(async (post) => ({ ...post, media_url: post.media_path ? await createSignedMediaUrl(post.media_path).catch(() => null) : null })))
 }
@@ -272,6 +288,7 @@ export async function createCommunityPost(input: {
   authorEmail: string
   authorName: string
   universe: Universe
+  sectionLabel: string
   title: string
   body: string
   file?: File | null
@@ -292,6 +309,7 @@ export async function createCommunityPost(input: {
       author_email: input.authorEmail.toLowerCase(),
       author_name: input.authorName,
       universe_slug: input.universe,
+      section_label: input.sectionLabel.trim() || "Contributions générales",
       title: input.title.trim(),
       body: input.body.trim() || null,
       media_path: mediaPath,

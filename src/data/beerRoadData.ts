@@ -50,6 +50,9 @@ export const siteMeta = {
   emojiTitle: "👣",
   heroImage: "/beer-road.jpeg",
   searchPlaceholder: "Chercher un univers, une idée, un mot…",
+  // Colle ici le lien de partage du dossier racine « Beer Road » sur Google Drive.
+  // Chaque ressource pourra ensuite avoir son propre lien direct dans content.links.
+  driveFolderUrl: "",
 }
 
 export const plaques: Plaque[] = [
@@ -212,6 +215,8 @@ export const plaques: Plaque[] = [
         { label: "Le dictionnaire de la tribu", description: "Expressions cultes, surnoms, traductions improbables et phrases à ne surtout pas sortir en public." },
         { label: "Les rites de Ker Huon", description: "Les habitudes et rituels des retrouvailles qui font sourire tout le monde." },
         { label: "La boîte à anecdotes", description: "Photos, vidéos, notes, enregistrements audio et histoires ajoutés par toute la famille." },
+        { label: "Le musée du presque-raté", description: "Bêtisiers, ratés de tournage et photos improbables — les coulisses qu'on n'a pas mises dans le film." },
+        { label: "La boîte à sons", description: "Expressions cultes, messages vocaux, mini-podcasts et ambiances sonores enregistrées par la tribu." },
         { label: "Le quiz Beer Road", description: "Des questions pour tester la mémoire de la tribu — et désigner le prochain payeur de pinte." },
       ],
       links: [
