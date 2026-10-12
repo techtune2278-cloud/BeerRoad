@@ -110,9 +110,9 @@ async function requestPublicAuth<T>(path: string, body: unknown): Promise<T> {
   return (await response.json()) as T
 }
 
-export async function sendEmailCode(email: string) {
+export async function sendMagicLink(email: string) {
   const config = getSupabaseConfig()
-  if (!config) throw new Error("Supabase n'est pas configuré : consulte le fichier README-V2.md.")
+  if (!config) throw new Error("Supabase n'est pas configuré : consulte le fichier README.md.")
   const redirectTo = typeof window !== "undefined" ? window.location.origin : undefined
   const suffix = redirectTo ? `?redirect_to=${encodeURIComponent(redirectTo)}` : ""
   return requestPublicAuth<{ message?: string }>(`/auth/v1/otp${suffix}`, {
@@ -136,19 +136,6 @@ function normalizeSession(payload: {
   }
 }
 
-export async function verifyEmailCode(email: string, token: string) {
-  const result = await requestPublicAuth<{
-    access_token: string
-    refresh_token: string
-    expires_in?: number
-    expires_at?: number
-    user: { id: string; email?: string }
-  }>("/auth/v1/verify", { email: email.trim().toLowerCase(), token: token.trim(), type: "email" })
-  const session = normalizeSession(result)
-  saveSession(session)
-  return session
-}
-
 export async function acceptEmailLinkFromUrl(): Promise<FamilySession | null> {
   if (typeof window === "undefined") return null
   const config = getSupabaseConfig()
@@ -170,7 +157,12 @@ export async function acceptEmailLinkFromUrl(): Promise<FamilySession | null> {
     user: { id: user.id, email: (user.email || "").toLowerCase() },
   }
   saveSession(session)
-  window.history.replaceState({}, document.title, `${window.location.pathname}${window.location.search}`)
+  // Retire les jetons de l'adresse après les avoir enregistrés. Cela évite de les laisser
+  // visibles dans la barre d'adresse ou lors d'une copie de l'URL.
+  const cleanUrl = new URL(window.location.href)
+  ;["access_token", "refresh_token", "expires_in", "expires_at", "token_type", "type", "code", "token_hash"].forEach((key) => cleanUrl.searchParams.delete(key))
+  cleanUrl.hash = ""
+  window.history.replaceState({}, document.title, `${cleanUrl.pathname}${cleanUrl.search}`)
   return session
 }
 
@@ -211,7 +203,7 @@ async function getValidSession(): Promise<FamilySession> {
 
 async function familyRequest<T>(path: string, options: RequestInit = {}): Promise<T> {
   const config = getSupabaseConfig()
-  if (!config) throw new Error("Supabase n'est pas configuré. Consulte README-V2.md.")
+  if (!config) throw new Error("Supabase n'est pas configuré. Consulte README.md.")
   const session = await getValidSession()
   const headers = new Headers(options.headers)
   headers.set("apikey", config.anonKey)

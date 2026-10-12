@@ -37,9 +37,8 @@ import {
   listCommunityPosts,
   listFamilyEvents,
   readFamilySession,
-  sendEmailCode,
+  sendMagicLink,
   updateFamilyEvent,
-  verifyEmailCode,
   type CommunityPost,
   type FamilyEvent,
   type FamilyMember,
@@ -103,9 +102,10 @@ export function CommunityHub({ contributionRequest }: { contributionRequest: { u
   const [tab, setTab] = useState<HubTab>("carnet")
   const [session, setSession] = useState<FamilySession | null>(null)
   const [member, setMember] = useState<FamilyMember | null>(null)
-  const [authStage, setAuthStage] = useState<"email" | "code">("email")
+  const [authStage, setAuthStage] = useState<"email" | "sent">("email")
+  // Évite de montrer le formulaire de connexion pendant la restauration de la session persistée.
+  const [authChecking, setAuthChecking] = useState(true)
   const [email, setEmail] = useState("")
-  const [code, setCode] = useState("")
   const [authBusy, setAuthBusy] = useState(false)
   const [loading, setLoading] = useState(false)
   const [notice, setNotice] = useState("")
@@ -149,8 +149,10 @@ export function CommunityHub({ contributionRequest }: { contributionRequest: { u
   useEffect(() => {
     let active = true
     async function initialise() {
-      if (!configured) return
       try {
+        if (!configured) return
+        // Le lien de confirmation est traité une seule fois. Aux visites suivantes,
+        // la session enregistrée dans ce navigateur est restaurée automatiquement.
         const fromLink = await acceptEmailLinkFromUrl()
         const saved = fromLink || readFamilySession()
         if (!saved || !active) return
@@ -161,16 +163,21 @@ export function CommunityHub({ contributionRequest }: { contributionRequest: { u
         if (!verifiedMember) {
           clearFamilySession()
           setSession(null)
+          setMember(null)
           setError("Cette adresse n'est pas encore autorisée à participer. Demande à l'administrateur de l'ajouter à la liste familiale.")
           return
         }
         setMember(verifiedMember)
+        if (fromLink) setNotice(`Connexion réussie. Bienvenue ${verifiedMember.display_name} ! Tu resteras connecté·e sur ce navigateur.`)
+        setAuthStage("email")
         await refreshSharedContent(activeCheck)
       } catch (err) {
         if (active) setError(err instanceof Error ? err.message : "Connexion impossible pour le moment.")
+      } finally {
+        // Le formulaire n'apparaît qu'après avoir vérifié qu'aucune session valide n'est déjà conservée.
+        if (active) setAuthChecking(false)
       }
     }
-    // Utilisé pour éviter de mettre à jour un composant démonté pendant un chargement.
     const activeCheck = () => active
     void initialise()
     return () => { active = false }
@@ -209,15 +216,14 @@ export function CommunityHub({ contributionRequest }: { contributionRequest: { u
     })
   }
 
-  async function handleSendCode(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault()
+  async function requestMagicLink() {
     setError("")
     setNotice("")
     setAuthBusy(true)
     try {
-      await sendEmailCode(email)
-      setAuthStage("code")
-      setNotice("E-mail envoyé. Ouvre ta boîte de réception : clique sur le lien de connexion, ou saisis le code à 6 chiffres si le message en contient un. L’adresse sert à vérifier que c’est bien toi.")
+      await sendMagicLink(email)
+      setAuthStage("sent")
+      setNotice(`Le courriel a été envoyé à ${email.trim()}. Ouvre-le et clique sur le lien du message (souvent « Confirmer votre email » lors de la première connexion). Aucun code n’est à saisir.`)
     } catch (err) {
       setError(err instanceof Error ? err.message : "Impossible d'envoyer l'e-mail de connexion.")
     } finally {
@@ -225,29 +231,6 @@ export function CommunityHub({ contributionRequest }: { contributionRequest: { u
     }
   }
 
-  async function handleVerifyCode(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-    setError("")
-    setNotice("")
-    setAuthBusy(true)
-    try {
-      const nextSession = await verifyEmailCode(email, code)
-      setSession(nextSession)
-      const verifiedMember = await getFamilyMember(nextSession.user.email)
-      if (!verifiedMember) {
-        clearFamilySession()
-        setSession(null)
-        throw new Error("Cette adresse n'est pas encore autorisée à participer. Demande à l'administrateur de l'ajouter à la liste familiale.")
-      }
-      setMember(verifiedMember)
-      setNotice(`Bienvenue ${verifiedMember.display_name} ! L'espace familial est ouvert.`)
-      await refreshSharedContent()
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Le code n'a pas pu être vérifié.")
-    } finally {
-      setAuthBusy(false)
-    }
-  }
 
   function handleSignOut() {
     clearFamilySession()
@@ -407,7 +390,7 @@ export function CommunityHub({ contributionRequest }: { contributionRequest: { u
           </p>
           <div className="mt-3 inline-flex max-w-full items-center gap-2 rounded-full border border-border bg-background px-3 py-1.5 text-xs" aria-live="polite">
             <CircleUserRound className="size-4 shrink-0 text-primary" />
-            {session && member ? <span>Session active : <strong>{member.display_name}</strong> · {session.user.email}</span> : <span>Pas de membre connecté dans ce navigateur.</span>}
+            {session && member ? <span>Session active : <strong>{member.display_name}</strong> · {session.user.email}</span> : authChecking && configured ? <span>Vérification de la connexion enregistrée…</span> : <span>Pas de membre connecté dans ce navigateur.</span>}
           </div>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -424,7 +407,7 @@ export function CommunityHub({ contributionRequest }: { contributionRequest: { u
       {error && <div role="alert" className="mt-5 rounded-2xl border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive">{error}</div>}
 
       {contributionRequest.nonce > 0 && contributionRequest.target === "carnet" && !session && <div className="mt-5 rounded-2xl border border-primary/25 bg-primary/5 p-4"><p className="font-semibold">Contribution préparée : {universeName(contributionRequest.universe)}</p><p className="mt-1 text-sm text-muted-foreground">Rubrique : {contributionRequest.section || "Contributions générales"}. Connecte-toi ci-dessous ; le formulaire gardera cette destination.</p></div>}
-      {tab === "agenda" && (!session || !member) && <div className="mt-5 rounded-2xl border border-primary/25 bg-primary/5 p-4"><p className="font-semibold">L’agenda familial est sélectionné</p><p className="mt-1 text-sm text-muted-foreground">Connecte-toi avec l’une des neuf adresses autorisées pour consulter les rendez-vous et en ajouter. Après connexion, l’onglet Agenda affichera son formulaire et la liste des événements.</p></div>}
+      {tab === "agenda" && !authChecking && (!session || !member) && <div className="mt-5 rounded-2xl border border-primary/25 bg-primary/5 p-4"><p className="font-semibold">L’agenda familial est sélectionné</p><p className="mt-1 text-sm text-muted-foreground">Connecte-toi avec l’une des neuf adresses autorisées pour consulter les rendez-vous et en ajouter. Après connexion, l’onglet Agenda affichera son formulaire et la liste des événements.</p></div>}
 
       {!configured ? (
         <div className="mt-6 grid gap-4 rounded-2xl border border-dashed border-border bg-background p-5 sm:grid-cols-[auto_1fr] sm:p-6">
@@ -434,24 +417,37 @@ export function CommunityHub({ contributionRequest }: { contributionRequest: { u
             <p className="mt-1 text-sm leading-relaxed text-muted-foreground">Aucune connexion Supabase valide n’est configurée. Les valeurs du fichier <code>.env.example</code> sont volontairement des exemples : elles doivent être remplacées par l’URL et la clé publique de TON projet Supabase, dans Vercel → Settings → Environment Variables. Sans ces vraies valeurs, le site ne tente pas d’appeler un domaine fictif.</p>
           </div>
         </div>
+      ) : authChecking ? (
+        <div className="mt-6 flex items-center gap-3 rounded-2xl border border-border bg-background p-5" role="status" aria-live="polite">
+          <span className="size-5 animate-spin rounded-full border-2 border-primary/25 border-t-primary" aria-hidden="true" />
+          <div><p className="font-semibold">Retrouvons ta session…</p><p className="mt-1 text-sm text-muted-foreground">Si tu t’es déjà connecté·e sur ce navigateur, tu entreras automatiquement sans demander un nouvel e-mail.</p></div>
+        </div>
       ) : !session || !member ? (
         <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(280px,0.85fr)]">
           <div className="rounded-2xl bg-secondary/55 p-5 sm:p-6">
             <div className="flex items-center gap-3"><span className="flex size-11 items-center justify-center rounded-2xl bg-background"><CircleUserRound className="size-5 text-primary" /></span><div><h3 className="font-semibold">Entrer dans l'espace familial</h3><p className="text-sm text-muted-foreground">Connexion par e-mail, sans mot de passe à retenir.</p></div></div>
             {authStage === "email" ? (
-              <form onSubmit={handleSendCode} className="mt-5 space-y-3">
-                <label htmlFor="family-email" className="block text-sm font-medium">Ton adresse e-mail</label>
+              <form onSubmit={(event) => { event.preventDefault(); void requestMagicLink() }} className="mt-5 space-y-3">
+                <label htmlFor="family-email" className="block text-sm font-medium">Ton adresse e-mail familiale</label>
+                <p className="text-xs leading-relaxed text-muted-foreground">À faire une seule fois sur ce navigateur : tu cliques sur le lien reçu par e-mail. Ensuite, La Beer Road se souvient de toi et te reconnecte automatiquement, tant que tu ne te déconnectes pas et que tu conserves les données de ce navigateur.</p>
                 <input id="family-email" type="email" autoComplete="email" required value={email} onChange={(event) => setEmail(event.target.value)} placeholder="prenom@exemple.fr" className="w-full rounded-xl border border-border bg-background px-4 py-3 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/15" />
-                <button type="submit" disabled={authBusy} className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"><LogIn className="size-4" />{authBusy ? "Envoi…" : "Envoyer mon lien / code de connexion"}</button>
+                <button type="submit" disabled={authBusy} className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"><LogIn className="size-4" />{authBusy ? "Envoi du courriel…" : "M’envoyer le courriel de connexion"}</button>
               </form>
             ) : (
-              <form onSubmit={handleVerifyCode} className="mt-5 space-y-3">
-                <p className="text-sm text-muted-foreground">E-mail envoyé à <strong className="text-foreground">{email}</strong>.</p>
-                <label htmlFor="family-code" className="block text-sm font-medium">Code à 6 chiffres (si présent dans l'e-mail)</label>
-                <input id="family-code" inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]{6}" maxLength={6} value={code} onChange={(event) => setCode(event.target.value.replace(/\D/g, "").slice(0, 6))} placeholder="123456" className="w-full rounded-xl border border-border bg-background px-4 py-3 text-center text-xl tracking-[0.35em] outline-none focus:border-primary focus:ring-2 focus:ring-primary/15" />
-                <button type="submit" disabled={authBusy || code.length !== 6} className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"><CheckCircle2 className="size-4" />{authBusy ? "Vérification…" : "Valider le code"}</button>
-                <button type="button" onClick={() => { setAuthStage("email"); setCode(""); setNotice(""); setError("") }} className="w-full py-1 text-sm text-muted-foreground underline underline-offset-4">Utiliser une autre adresse</button>
-              </form>
+              <div className="mt-5 space-y-4">
+                <div className="rounded-xl border border-primary/25 bg-background p-4">
+                  <p className="font-semibold">Un courriel a été envoyé à :</p>
+                  <p className="mt-1 break-all text-sm text-primary">{email}</p>
+                  <ol className="mt-4 list-decimal space-y-2 pl-5 text-sm leading-relaxed">
+                    <li>Ouvre ce courriel. L’expéditeur peut être Supabase et le sujet peut être « Confirmer votre email ».</li>
+                    <li>Clique sur le bouton ou le lien du courriel. Lors de la première connexion, il porte généralement le nom <strong>« Confirmer votre email »</strong>.</li>
+                    <li>Tu reviendras sur La Beer Road, connecté·e automatiquement.</li>
+                  </ol>
+                  <p className="mt-3 text-xs leading-relaxed text-muted-foreground">Ne cherche pas de code à six chiffres : il suffit de cliquer sur le lien. C’est une étape de confirmation initiale. Ensuite, tu n’auras normalement plus à demander de courriel sur ce même navigateur, sauf déconnexion volontaire, données du navigateur effacées ou session révoquée. Ouvre ce lien dans le même navigateur que La Beer Road.</p>
+                </div>
+                <button type="button" onClick={() => void requestMagicLink()} disabled={authBusy} className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-border bg-background px-4 py-3 text-sm font-semibold transition hover:bg-secondary disabled:opacity-50"><LogIn className="size-4" />{authBusy ? "Envoi…" : "Renvoyer le courriel"}</button>
+                <button type="button" onClick={() => { setAuthStage("email"); setNotice(""); setError("") }} className="w-full py-1 text-sm text-muted-foreground underline underline-offset-4">Changer d’adresse e-mail</button>
+              </div>
             )}
             <p className="mt-4 text-xs leading-relaxed text-muted-foreground">L'accès aux contributions et aux médias est réservé aux adresses ajoutées à la liste familiale dans Supabase. Un lien reçu ne suffit pas à obtenir cet accès.</p>
           </div>

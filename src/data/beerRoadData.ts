@@ -50,9 +50,8 @@ export const siteMeta = {
   emojiTitle: "👣",
   heroImage: "/beer-road.jpeg",
   searchPlaceholder: "Chercher un univers, une idée, un mot…",
-  // Colle ici le lien de partage du dossier racine « Beer Road » sur Google Drive.
-  // Chaque ressource pourra ensuite avoir son propre lien direct dans content.links.
-  driveFolderUrl: "",
+  // Dossier racine Beer Road partagé par la famille. Les sous-dossiers peuvent être ajoutés au fil du temps.
+  driveFolderUrl: "https://drive.google.com/drive/folders/1tn5NZkTjxGQHj_LJC9hVGPtB31Vh-4vq?usp=drive_link",
 }
 
 export const plaques: Plaque[] = [
@@ -78,16 +77,21 @@ export const plaques: Plaque[] = [
           title: "La Beer Road",
           subtitle: "Le deuxième album du Grenier d'Elwood — livret et paroles",
           cover: "/Beer_road.png",
-          links: [{ label: "Ouvrir le livret de l'album (PDF)", url: "/Livret_de_la_Beer_Road.pdf", kind: "pdf" }],
+          links: [
+            { label: "Ouvrir le livret de l'album (PDF)", url: "/Livret_de_la_Beer_Road.pdf", kind: "pdf" },
+            { label: "Ouvrir les paroles sur Google Drive", url: "https://drive.google.com/drive/folders/1xcqEB3VeeiV5huZlIpcoAWTsvY27cngD?usp=drive_link", kind: "external" },
+            { label: "Écouter les chansons (.wav) sur Google Drive", url: "https://drive.google.com/drive/folders/1-LGw_SDDk1QqtPsA8_p9QPgd89zfrIxF?usp=drive_link", kind: "music" },
+          ],
         },
       ],
       video: {
         title: "Le film La Beer Road",
-        description: "Le film pourra être intégré ici dès que son lien privé ou sa vidéo hébergée sera choisi.",
+        description: "Le film est conservé dans le dossier familial Google Drive. Clique pour l'ouvrir ; si Drive le demande, connecte-toi à un compte autorisé.",
       },
       links: [
-        { label: "Regarder le film La Beer Road", kind: "video" },
-        { label: "Écouter l’album La Beer Road", kind: "music" },
+        { label: "Ouvrir le dossier du film La Beer Road", url: "https://drive.google.com/drive/folders/1_ixkqhZkDROkBlIlgTo5EMO_pjI3oW32?usp=drive_link", kind: "video" },
+        { label: "Ouvrir les paroles sur Google Drive", url: "https://drive.google.com/drive/folders/1xcqEB3VeeiV5huZlIpcoAWTsvY27cngD?usp=drive_link", kind: "external" },
+        { label: "Écouter les chansons (.wav) sur Google Drive", url: "https://drive.google.com/drive/folders/1-LGw_SDDk1QqtPsA8_p9QPgd89zfrIxF?usp=drive_link", kind: "music" },
       ],
     },
   },
@@ -163,7 +167,8 @@ export const plaques: Plaque[] = [
         { label: "Suivre les prochaines sorties", description: "Un espace vivant pour annoncer les nouveaux projets musicaux du Grenier." },
       ],
       links: [
-        { label: "Premier album du Grenier d’Elwood", kind: "music" },
+        { label: "Chansons (.wav) du Grenier d’Elwood sur Google Drive", url: "https://drive.google.com/drive/folders/1-LGw_SDDk1QqtPsA8_p9QPgd89zfrIxF?usp=drive_link", kind: "music" },
+        { label: "Paroles des chansons sur Google Drive", url: "https://drive.google.com/drive/folders/1xcqEB3VeeiV5huZlIpcoAWTsvY27cngD?usp=drive_link", kind: "external" },
         { label: "Lire le livret La Beer Road (PDF)", url: "/Livret_de_la_Beer_Road.pdf", kind: "pdf" },
         { label: "Troisième album — en préparation", kind: "music" },
         { label: "Quatrième album — en préparation", kind: "music" },
