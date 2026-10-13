@@ -229,7 +229,7 @@ export async function getFamilyMember(email: string): Promise<FamilyMember | nul
 }
 
 export async function listCommunityPosts(): Promise<CommunityPost[]> {
-  const query = new URLSearchParams({ select: "id,created_at,author_email,author_name,universe_slug,section_label,title,body,media_path,media_type,external_url", order: "created_at.desc", limit: "60" })
+  const query = new URLSearchParams({ select: "id,created_at,author_email,author_name,universe_slug,section_label,title,body,media_path,media_type,external_url", order: "created_at.desc", limit: "200" })
   const posts = await familyRequest<CommunityPost[]>(`/rest/v1/community_posts?${query.toString()}`)
   return Promise.all(posts.map(async (post) => ({ ...post, media_url: post.media_path ? await createSignedMediaUrl(post.media_path).catch(() => null) : null })))
 }
@@ -311,6 +311,71 @@ export async function createCommunityPost(input: {
   })
   const post = rows[0]
   return { ...post, media_url: mediaPath ? await createSignedMediaUrl(mediaPath).catch(() => null) : null }
+}
+
+/** Met à jour une contribution. Les permissions Supabase limitent la modification à son auteur. */
+export async function updateCommunityPost(id: string, existing: CommunityPost, input: {
+  universe: Universe
+  sectionLabel: string
+  title: string
+  body: string
+  file?: File | null
+  userId: string
+  externalUrl?: string
+  removeExistingMedia?: boolean
+}): Promise<CommunityPost> {
+  let mediaPath = existing.media_path
+  let mediaType = existing.media_type
+  if (input.file) {
+    const uploaded = await uploadFamilyMedia(input.file, input.userId)
+    mediaPath = uploaded.path
+    mediaType = uploaded.mediaType
+  } else if (input.removeExistingMedia) {
+    mediaPath = null
+    mediaType = null
+  }
+
+  try {
+    const rows = await familyRequest<CommunityPost[]>(`/rest/v1/community_posts?id=eq.${encodeURIComponent(id)}`, {
+      method: "PATCH",
+      headers: { Prefer: "return=representation" },
+      body: JSON.stringify({
+        universe_slug: input.universe,
+        section_label: input.sectionLabel.trim() || "Contributions générales",
+        title: input.title.trim(),
+        body: input.body.trim() || null,
+        media_path: mediaPath,
+        media_type: mediaType,
+        external_url: input.externalUrl?.trim() || null,
+      }),
+    })
+    if (!rows.length) throw new Error("La contribution n'a pas été modifiée. Vérifie que tu en es bien l'auteur et réessaie.")
+    const updated = rows[0]
+
+    if (existing.media_path && existing.media_path !== mediaPath) {
+      // Le nettoyage du fichier précédent ne doit pas annuler une modification déjà enregistrée.
+      try {
+        await familyRequest<void>(`/storage/v1/object/${BUCKET}/${encodeStoragePath(existing.media_path)}`, { method: "DELETE" })
+      } catch { /* fichier orphelin éventuel : la contribution reste bien modifiée */ }
+    }
+    return { ...updated, media_url: mediaPath ? await createSignedMediaUrl(mediaPath).catch(() => null) : null }
+  } catch (error) {
+    // Si l'enregistrement a échoué après l'envoi d'un nouveau fichier, on tente de le retirer.
+    if (input.file && mediaPath && mediaPath !== existing.media_path) {
+      try { await familyRequest<void>(`/storage/v1/object/${BUCKET}/${encodeStoragePath(mediaPath)}`, { method: "DELETE" }) } catch { /* nettoyage best effort */ }
+    }
+    throw error
+  }
+}
+
+/** Supprime la publication de son auteur, puis tente de supprimer son fichier associé. */
+export async function deleteCommunityPost(post: CommunityPost): Promise<void> {
+  await familyRequest<void>(`/rest/v1/community_posts?id=eq.${encodeURIComponent(post.id)}`, { method: "DELETE" })
+  if (post.media_path) {
+    try {
+      await familyRequest<void>(`/storage/v1/object/${BUCKET}/${encodeStoragePath(post.media_path)}`, { method: "DELETE" })
+    } catch { /* la publication a été supprimée ; seul un fichier inutilisé peut rester */ }
+  }
 }
 
 export async function createFamilyEvent(input: {

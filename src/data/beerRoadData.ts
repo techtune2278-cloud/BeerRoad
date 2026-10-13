@@ -11,6 +11,8 @@ export type PlaqueLink = {
   label: string
   url?: string
   kind: "pdf" | "video" | "external" | "music"
+  /** False when the same resource is already presented in another, clearer part of the card. */
+  displayInResources?: boolean
 }
 
 export type Highlight = {
@@ -61,7 +63,7 @@ export const plaques: Plaque[] = [
     tagline: "Le film, l'album et la légende Beer Road",
     emoji: "🎬",
     universe: "origines",
-    position: { x: 39.0, y: 84.5, width: 12, height: 10.5, rotate: 1 },
+    position: { x: 39.0, y: 82, width: 12, height: 10.5, rotate: 1 },
     content: {
       intro: [
         "Tout commence par une traversée de passage piéton qui n'aurait jamais dû entrer dans l'histoire du cinéma. Quatre gendres, quatre soifs, une radio TSF et un point de chute : Ker Huon.",
@@ -79,8 +81,8 @@ export const plaques: Plaque[] = [
           cover: "/Beer_road.png",
           links: [
             { label: "Ouvrir le livret de l'album (PDF)", url: "/Livret_de_la_Beer_Road.pdf", kind: "pdf" },
-            { label: "Ouvrir les paroles sur Google Drive", url: "https://drive.google.com/drive/folders/1xcqEB3VeeiV5huZlIpcoAWTsvY27cngD?usp=drive_link", kind: "external" },
-            { label: "Écouter les chansons (.wav) sur Google Drive", url: "https://drive.google.com/drive/folders/1-LGw_SDDk1QqtPsA8_p9QPgd89zfrIxF?usp=drive_link", kind: "music" },
+            { label: "Ouvrir les paroles sur Google Drive", url: "https://drive.google.com/drive/folders/1xcqEB3VeeiV5huZlIpcoAWTsvY27cngD?usp=drive_link", kind: "external", displayInResources: false },
+            { label: "Écouter les chansons (.wav) sur Google Drive", url: "https://drive.google.com/drive/folders/1-LGw_SDDk1QqtPsA8_p9QPgd89zfrIxF?usp=drive_link", kind: "music", displayInResources: false },
           ],
         },
       ],
@@ -89,9 +91,9 @@ export const plaques: Plaque[] = [
         description: "Le film est conservé dans le dossier familial Google Drive. Clique pour l'ouvrir ; si Drive le demande, connecte-toi à un compte autorisé.",
       },
       links: [
-        { label: "Ouvrir le dossier du film La Beer Road", url: "https://drive.google.com/drive/folders/1_ixkqhZkDROkBlIlgTo5EMO_pjI3oW32?usp=drive_link", kind: "video" },
-        { label: "Ouvrir les paroles sur Google Drive", url: "https://drive.google.com/drive/folders/1xcqEB3VeeiV5huZlIpcoAWTsvY27cngD?usp=drive_link", kind: "external" },
-        { label: "Écouter les chansons (.wav) sur Google Drive", url: "https://drive.google.com/drive/folders/1-LGw_SDDk1QqtPsA8_p9QPgd89zfrIxF?usp=drive_link", kind: "music" },
+        { label: "Ouvrir le dossier du film La Beer Road", url: "https://drive.google.com/drive/folders/1_ixkqhZkDROkBlIlgTo5EMO_pjI3oW32?usp=drive_link", kind: "video", displayInResources: false },
+        { label: "Ouvrir les paroles sur Google Drive", url: "https://drive.google.com/drive/folders/1xcqEB3VeeiV5huZlIpcoAWTsvY27cngD?usp=drive_link", kind: "external", displayInResources: false },
+        { label: "Écouter les chansons (.wav) sur Google Drive", url: "https://drive.google.com/drive/folders/1-LGw_SDDk1QqtPsA8_p9QPgd89zfrIxF?usp=drive_link", kind: "music", displayInResources: false },
       ],
     },
   },
@@ -101,7 +103,7 @@ export const plaques: Plaque[] = [
     tagline: "Livres, lettres et podcasts pour aller plus loin",
     emoji: "📚",
     universe: "transmission",
-    position: { x: 42.0, y: 64.5, width: 11, height: 7.5, rotate: -2 },
+    position: { x: 42.0, y: 62.5, width: 11, height: 7.5, rotate: -2 },
     content: {
       intro: [
         "Certaines conversations méritent de durer plus longtemps qu'un repas ou qu'un séjour. Ici, les mots servent à ouvrir des questions, transmettre des idées et poursuivre les échanges commencés avec le film.",
@@ -129,7 +131,7 @@ export const plaques: Plaque[] = [
     tagline: "Les applications imaginées pour la tribu",
     emoji: "🧪",
     universe: "atelier",
-    position: { x: 39.5, y: 52.5, width: 11, height: 5.0, rotate: -5 },
+    position: { x: 39.5, y: 51, width: 11, height: 6.0, rotate: -5 },
     content: {
       intro: [
         "Une idée peut devenir un outil utile. Cet atelier rassemble les applications conçues pour simplifier le quotidien, cuisiner, mieux gérer les provisions ou faire naître de nouveaux usages familiaux.",
@@ -155,7 +157,7 @@ export const plaques: Plaque[] = [
     tagline: "Les albums, les chansons et les histoires derrière la musique",
     emoji: "🎸",
     universe: "grenier",
-    position: { x: 35.0, y: 40.3, width: 9.5, height: 4.4, rotate: -8 },
+    position: { x: 34.0, y: 40.8, width: 9.5, height: 4.4, rotate: -8 },
     content: {
       intro: [
         "Le Grenier d'Elwood est la maison des créations musicales : les albums, les titres, les paroles et les histoires qui les ont fait naître.",
@@ -167,7 +169,7 @@ export const plaques: Plaque[] = [
         { label: "Suivre les prochaines sorties", description: "Un espace vivant pour annoncer les nouveaux projets musicaux du Grenier." },
       ],
       links: [
-        { label: "Chansons (.wav) du Grenier d’Elwood sur Google Drive", url: "https://drive.google.com/drive/folders/1-LGw_SDDk1QqtPsA8_p9QPgd89zfrIxF?usp=drive_link", kind: "music" },
+        { label: "Chansons du Grenier d’Elwood sur les plateformes", url: "https://linktr.ee/LeGrenierElwood", kind: "music" },
         { label: "Paroles des chansons sur Google Drive", url: "https://drive.google.com/drive/folders/1xcqEB3VeeiV5huZlIpcoAWTsvY27cngD?usp=drive_link", kind: "external" },
         { label: "Lire le livret La Beer Road (PDF)", url: "/Livret_de_la_Beer_Road.pdf", kind: "pdf" },
         { label: "Troisième album — en préparation", kind: "music" },
@@ -185,7 +187,7 @@ export const plaques: Plaque[] = [
     tagline: "Les astuces pour bien vivre à Ker Huon",
     emoji: "🏡",
     universe: "kerhuon",
-    position: { x: 31.5, y: 29.5, width: 9.5, height: 4.0, rotate: -10 },
+    position: { x: 29.7, y: 34, width: 9.5, height: 4.0, rotate: -10 },
     content: {
       intro: [
         "Ker Huon est le point de départ physique de la Beer Road, mais pas sa limite. Ce pas rassemble tout ce qui aide chacun à se sentir chez lui, à prendre soin de la maison et à faciliter la vie collective.",
@@ -210,7 +212,7 @@ export const plaques: Plaque[] = [
     tagline: "Les codes, les rituels et les blagues que l'on partage",
     emoji: "🍻",
     universe: "legendes",
-    position: { x: 23.5, y: 18.7, width: 8.5, height: 3.8, rotate: -7 },
+    position: { x: 23.5, y: 29, width: 8.5, height: 3.8, rotate: -7 },
     content: {
       intro: [
         "Chaque tribu fabrique peu à peu ses expressions, ses personnages, ses traditions et ses histoires impossibles à raconter aux gens de l'extérieur. Ici, on conserve la culture commune sans empiéter sur les albums privés de chaque foyer.",
@@ -236,7 +238,7 @@ export const plaques: Plaque[] = [
     name: "La Route des lendemains",
     tagline: "Projets communs, agenda et messages pour le futur",
     emoji: "🧭",
-    position: { x: 19.3, y: 12.5, width: 8.5, height: 3.5, rotate: -8 },
+    position: { x: 19, y: 24.5, width: 8.5, height: 3.5, rotate: -8 },
     universe: "avenir",
     content: {
       intro: [

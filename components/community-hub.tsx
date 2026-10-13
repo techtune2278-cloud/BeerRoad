@@ -29,6 +29,8 @@ import {
   acceptEmailLinkFromUrl,
   clearFamilySession,
   createCommunityPost,
+  updateCommunityPost,
+  deleteCommunityPost,
   createFamilyEvent,
   deleteFamilyEvent,
   formatDateTime,
@@ -98,7 +100,7 @@ function mediaIcon(kind: string) {
 }
 
 type AuthStatus = { status: "checking" | "connected" | "disconnected"; label: string; email?: string }
-type ContributionRequest = { universe: Universe; section: string; target: "carnet" | "agenda"; nonce: number }
+type ContributionRequest = { universe: Universe; section: string; target: "carnet" | "agenda" | "feed"; nonce: number }
 
 export function CommunityHub({ contributionRequest, onAuthStatusChange }: { contributionRequest: ContributionRequest; onAuthStatusChange?: (status: AuthStatus) => void }) {
   const configured = isSupabaseConfigured()
@@ -119,11 +121,14 @@ export function CommunityHub({ contributionRequest, onAuthStatusChange }: { cont
   const [postSection, setPostSection] = useState<string>(contributionRequest.section || "Contributions générales")
   const [feedUniverse, setFeedUniverse] = useState<Universe | "all">("all")
   const [feedSection, setFeedSection] = useState<string | "all">("all")
+  const [feedOnlyMine, setFeedOnlyMine] = useState(false)
   const [postIntent, setPostIntent] = useState<ContributionIntent>("any")
   const [postTitle, setPostTitle] = useState("")
   const [postBody, setPostBody] = useState("")
   const [postFile, setPostFile] = useState<File | null>(null)
   const [postExternalUrl, setPostExternalUrl] = useState("")
+  const [editingPostId, setEditingPostId] = useState<string | null>(null)
+  const [removeExistingMedia, setRemoveExistingMedia] = useState(false)
   const [editingEventId, setEditingEventId] = useState<string | null>(null)
   const [eventTitle, setEventTitle] = useState("")
   const [eventDate, setEventDate] = useState("")
@@ -147,18 +152,27 @@ export function CommunityHub({ contributionRequest, onAuthStatusChange }: { cont
   useEffect(() => {
     if (contributionRequest.nonce === 0 || formFocusRequest.current === contributionRequest.nonce) return
     formFocusRequest.current = contributionRequest.nonce
-    setPostUniverse(contributionRequest.universe)
-    setPostSection(contributionRequest.section || "Contributions générales")
-    setPostTitle(contributionRequest.section && contributionRequest.section !== "Contributions générales" ? contributionRequest.section : "")
     setFeedUniverse(contributionRequest.universe)
     setFeedSection(contributionRequest.section && contributionRequest.section !== "Agenda familial" ? contributionRequest.section : "all")
-    setTab(contributionRequest.target)
+    setPostUniverse(contributionRequest.universe)
+    setPostSection(contributionRequest.section === "all" ? "Contributions générales" : contributionRequest.section || "Contributions générales")
+    setPostTitle(contributionRequest.target === "feed" ? "" : contributionRequest.section && contributionRequest.section !== "Contributions générales" ? contributionRequest.section : "")
+    setEditingPostId(null)
+    setRemoveExistingMedia(false)
+    setPostFile(null)
+    setTab(contributionRequest.target === "agenda" ? "agenda" : "carnet")
     window.requestAnimationFrame(() => {
-      const targetId = contributionRequest.target === "agenda" ? "agenda-panel" : "community-post-form"
+      const targetId = contributionRequest.target === "agenda" ? "agenda-panel" : contributionRequest.target === "feed" ? "community-feed" : "community-post-form"
       const target = document.getElementById(targetId) || document.getElementById("family-email") || document.getElementById("carnet")
-      target?.scrollIntoView({ behavior: "smooth", block: "center" })
+      target?.scrollIntoView({ behavior: "smooth", block: "start" })
     })
   }, [contributionRequest])
+
+  useEffect(() => {
+    if (contributionRequest.target !== "feed" || !session || !member) return
+    const frame = window.requestAnimationFrame(() => document.getElementById("community-feed")?.scrollIntoView({ behavior: "smooth", block: "start" }))
+    return () => window.cancelAnimationFrame(frame)
+  }, [contributionRequest.target, contributionRequest.nonce, session, member])
 
   useEffect(() => {
     let active = true
@@ -261,6 +275,50 @@ export function CommunityHub({ contributionRequest, onAuthStatusChange }: { cont
     setError("")
   }
 
+  function resetPostForm() {
+    setEditingPostId(null)
+    setPostTitle("")
+    setPostBody("")
+    setPostFile(null)
+    setPostExternalUrl("")
+    setRemoveExistingMedia(false)
+    const fileInput = document.getElementById("community-file") as HTMLInputElement | null
+    if (fileInput) fileInput.value = ""
+  }
+
+  function beginEditPost(post: CommunityPost) {
+    setEditingPostId(post.id)
+    setPostUniverse(post.universe_slug)
+    setPostSection(post.section_label || "Contributions générales")
+    setPostTitle(post.title)
+    setPostBody(post.body || "")
+    setPostExternalUrl(post.external_url || "")
+    setPostFile(null)
+    setRemoveExistingMedia(false)
+    setPostIntent("any")
+    setError("")
+    setNotice(`Modification de « ${post.title} ».`)
+    window.requestAnimationFrame(() => document.getElementById("community-post-form")?.scrollIntoView({ behavior: "smooth", block: "start" }))
+  }
+
+  async function handleDeletePost(post: CommunityPost) {
+    if (!session || post.author_email.toLowerCase() !== session.user.email.toLowerCase()) return
+    if (!window.confirm(`Supprimer définitivement « ${post.title} » ? Cette action est irréversible.`)) return
+    setError("")
+    setNotice("")
+    setLoading(true)
+    try {
+      await deleteCommunityPost(post)
+      setPosts((current) => current.filter((item) => item.id !== post.id))
+      if (editingPostId === post.id) resetPostForm()
+      setNotice("Ta contribution a été supprimée.")
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "La contribution n'a pas pu être supprimée.")
+    } finally {
+      setLoading(false)
+    }
+  }
+
   async function handleCreatePost(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     if (!session || !member) return
@@ -271,39 +329,54 @@ export function CommunityHub({ contributionRequest, onAuthStatusChange }: { cont
       if (postFile) {
         const kind = fileKind(postFile)
         const limit = kind === "video" ? 25 : kind === "audio" ? 20 : 10
-        if (postFile.size > limit * 1024 * 1024) throw new Error(`Le fichier dépasse la limite conseillée de ${limit} Mo. Pour un média plus lourd, utilise le champ « Lien vers un média ». `)
+        if (postFile.size > limit * 1024 * 1024) throw new Error(`Le fichier dépasse la limite conseillée de ${limit} Mo. Pour un média plus lourd, utilise le champ « Lien vers un média ».`)
       }
       if (postExternalUrl.trim()) {
         let parsed: URL
         try { parsed = new URL(postExternalUrl.trim()) } catch { throw new Error("Le lien du média n'est pas une URL valide.") }
         if (parsed.protocol !== "https:" && parsed.protocol !== "http:") throw new Error("Le lien doit commencer par https:// ou http://.")
         if (postFile) throw new Error("Choisis soit un fichier à téléverser, soit un lien externe, pas les deux.")
+        const currentlyEdited = editingPostId ? posts.find((post) => post.id === editingPostId) : null
+        if (currentlyEdited?.media_path && !removeExistingMedia) throw new Error("Cette contribution possède déjà un fichier. Pour le remplacer par un lien externe, coche d'abord « Retirer le fichier actuel ».")
       }
       if (!postTitle.trim()) throw new Error("Donne un titre à ta contribution.")
-      if (!postBody.trim() && !postFile && !postExternalUrl.trim()) throw new Error("Ajoute un texte, joins un petit fichier ou colle un lien vers le média.")
-      const created = await createCommunityPost({
-        authorEmail: session.user.email,
-        authorName: member.display_name,
-        universe: postUniverse,
-        sectionLabel: postSection,
-        title: postTitle,
-        body: postBody,
-        file: postFile,
-        externalUrl: postExternalUrl.trim() || undefined,
-        userId: session.user.id,
-      })
-      setPosts((current) => [created, ...current])
-      setPostTitle("")
-      setPostBody("")
-      setPostFile(null)
-      setPostExternalUrl("")
+      const existingPost = editingPostId ? posts.find((post) => post.id === editingPostId) : null
+      const hasExistingMedia = Boolean(existingPost?.media_path && !removeExistingMedia)
+      if (!postBody.trim() && !postFile && !postExternalUrl.trim() && !hasExistingMedia) throw new Error("Ajoute un texte, joins un petit fichier ou colle un lien vers le média.")
+
+      if (editingPostId && existingPost) {
+        const updated = await updateCommunityPost(editingPostId, existingPost, {
+          universe: postUniverse,
+          sectionLabel: postSection,
+          title: postTitle,
+          body: postBody,
+          file: postFile,
+          externalUrl: postExternalUrl.trim() || undefined,
+          userId: session.user.id,
+          removeExistingMedia,
+        })
+        setPosts((current) => current.map((post) => post.id === updated.id ? updated : post))
+        setNotice("Ta contribution a été modifiée.")
+      } else {
+        const created = await createCommunityPost({
+          authorEmail: session.user.email,
+          authorName: member.display_name,
+          universe: postUniverse,
+          sectionLabel: postSection,
+          title: postTitle,
+          body: postBody,
+          file: postFile,
+          externalUrl: postExternalUrl.trim() || undefined,
+          userId: session.user.id,
+        })
+        setPosts((current) => [created, ...current])
+        setNotice("Contribution publiée dans le carnet de la tribu. Merci !")
+      }
       setFeedUniverse(postUniverse)
       setFeedSection(postSection)
-      const fileInput = document.getElementById("community-file") as HTMLInputElement | null
-      if (fileInput) fileInput.value = ""
-      setNotice("Contribution publiée dans le carnet de la tribu. Merci !")
+      resetPostForm()
     } catch (err) {
-      setError(err instanceof Error ? err.message : "La contribution n'a pas pu être publiée.")
+      setError(err instanceof Error ? err.message : "La contribution n'a pas pu être enregistrée.")
     } finally {
       setLoading(false)
     }
@@ -389,7 +462,11 @@ export function CommunityHub({ contributionRequest, onAuthStatusChange }: { cont
   }
 
   const visibleEvents = useMemo(() => events.filter((event) => new Date(event.start_at).getTime() >= Date.now()), [events])
-  const visiblePosts = useMemo(() => posts.filter((post) => (feedUniverse === "all" || post.universe_slug === feedUniverse) && (feedSection === "all" || (post.section_label || "Contributions générales") === feedSection)), [posts, feedUniverse, feedSection])
+  const visiblePosts = useMemo(() => posts.filter((post) =>
+    (feedUniverse === "all" || post.universe_slug === feedUniverse) &&
+    (feedSection === "all" || (post.section_label || "Contributions générales") === feedSection) &&
+    (!feedOnlyMine || post.author_email.toLowerCase() === (session?.user.email || "").toLowerCase())
+  ), [posts, feedUniverse, feedSection, feedOnlyMine, session?.user.email])
   const postSectionOptions = useMemo(() => sectionsForUniverse(postUniverse), [postUniverse])
   const feedSectionOptions = useMemo(() => feedUniverse === "all" ? [] : sectionsForUniverse(feedUniverse), [feedUniverse])
 
@@ -425,7 +502,7 @@ export function CommunityHub({ contributionRequest, onAuthStatusChange }: { cont
       {notice && <div role="status" className="mt-5 flex items-start gap-2 rounded-2xl border border-primary/20 bg-primary/5 px-4 py-3 text-sm"><CheckCircle2 className="mt-0.5 size-4 shrink-0 text-primary" /><p>{notice}</p></div>}
       {error && <div role="alert" className="mt-5 rounded-2xl border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive">{error}</div>}
 
-      {contributionRequest.nonce > 0 && contributionRequest.target === "carnet" && !session && <div className="mt-5 rounded-2xl border border-primary/25 bg-primary/5 p-4"><p className="font-semibold">Contribution préparée : {universeName(contributionRequest.universe)}</p><p className="mt-1 text-sm text-muted-foreground">Rubrique : {contributionRequest.section || "Contributions générales"}. Connecte-toi ci-dessous ; le formulaire gardera cette destination.</p></div>}
+      {contributionRequest.nonce > 0 && (contributionRequest.target === "carnet" || contributionRequest.target === "feed") && !session && <div className="mt-5 rounded-2xl border border-primary/25 bg-primary/5 p-4"><p className="font-semibold">{contributionRequest.target === "feed" ? "Contributions à consulter" : "Contribution à préparer"} : {universeName(contributionRequest.universe)}</p><p className="mt-1 text-sm text-muted-foreground">Rubrique : {contributionRequest.section || "Contributions générales"}. Connecte-toi ci-dessous pour accéder aux publications réservées à la famille{contributionRequest.target === "carnet" ? " ; le formulaire gardera cette destination" : "."}.</p></div>}
       {tab === "agenda" && !authChecking && (!session || !member) && <div className="mt-5 rounded-2xl border border-primary/25 bg-primary/5 p-4"><p className="font-semibold">L’agenda familial est sélectionné</p><p className="mt-1 text-sm text-muted-foreground">Connecte-toi avec l’une des neuf adresses autorisées pour consulter les rendez-vous et en ajouter. Après connexion, l’onglet Agenda affichera son formulaire et la liste des événements.</p></div>}
 
       {!configured ? (
@@ -490,7 +567,7 @@ export function CommunityHub({ contributionRequest, onAuthStatusChange }: { cont
           {tab === "carnet" ? (
             <div className="mt-5 grid gap-6 lg:grid-cols-[minmax(280px,0.85fr)_minmax(0,1.15fr)]">
               <form id="community-post-form" onSubmit={handleCreatePost} className="scroll-mt-6 self-start rounded-2xl border border-border bg-background p-5">
-                <div className="flex items-center gap-2"><span className="flex size-9 items-center justify-center rounded-xl bg-secondary"><Upload className="size-4 text-primary" /></span><h3 className="font-semibold">Déposer une contribution</h3></div>
+                <div className="flex items-center gap-2"><span className="flex size-9 items-center justify-center rounded-xl bg-secondary"><Upload className="size-4 text-primary" /></span><h3 className="font-semibold">{editingPostId ? "Modifier ma contribution" : "Déposer une contribution"}</h3></div>
                 <p className="mt-2 text-sm text-muted-foreground">Chaque dépôt est classé dans un univers précis et devient visible aux membres autorisés.</p>
                 <div className="mt-3 rounded-xl border border-primary/20 bg-primary/5 p-3 text-sm"><span className="block"><strong>Univers :</strong> {universeName(postUniverse)}</span><span className="mt-1 block"><strong>Rubrique :</strong> {postSection}</span>{postIntent !== "any" && <span className="block mt-1 text-muted-foreground">Type préparé : {postIntent === "text" ? "texte / anecdote" : postIntent === "audio" ? "audio / MP3" : "photo / vidéo"}. Tu peux encore le modifier.</span>}</div>
                 <label htmlFor="post-universe" className="mt-4 block text-sm font-medium">Univers concerné</label>
@@ -506,20 +583,22 @@ export function CommunityHub({ contributionRequest, onAuthStatusChange }: { cont
                 <input id="post-title" required maxLength={140} value={postTitle} onChange={(event) => setPostTitle(event.target.value)} placeholder="Le fameux incident du barbecue…" className="mt-1.5 w-full rounded-xl border border-border bg-card px-3 py-2.5 text-sm outline-none focus:border-primary" />
                 <label htmlFor="post-body" className="mt-4 block text-sm font-medium">Raconte ou ajoute un commentaire</label>
                 <textarea id="post-body" rows={4} value={postBody} onChange={(event) => setPostBody(event.target.value)} placeholder="Le contexte, la date, les personnes présentes, pourquoi c'est culte…" className="mt-1.5 w-full resize-y rounded-xl border border-border bg-card px-3 py-2.5 text-sm outline-none focus:border-primary" />
-                <label htmlFor="community-file" className="mt-4 block text-sm font-medium">Joindre un petit fichier (facultatif)</label>
+                {editingPostId && posts.find((post) => post.id === editingPostId)?.media_path && <div className="mt-4 rounded-xl border border-border bg-secondary/40 p-3 text-sm"><p className="font-medium">Un fichier est déjà associé à cette contribution.</p><p className="mt-1 text-xs text-muted-foreground">Sans nouveau fichier, il sera conservé, sauf si tu coches l'option ci-dessous.</p><label className="mt-3 flex items-center gap-2"><input type="checkbox" checked={removeExistingMedia} onChange={(event) => setRemoveExistingMedia(event.target.checked)} />Retirer le fichier actuel</label></div>}
+                <label htmlFor="community-file" className="mt-4 block text-sm font-medium">{editingPostId ? "Remplacer par un nouveau fichier (facultatif)" : "Joindre un petit fichier (facultatif)"}</label>
                 <input id="community-file" type="file" accept={postIntent === "image-video" ? imageVideoTypes : postIntent === "audio" ? audioTypes : allowedFileTypes} onChange={(event) => setPostFile(event.target.files?.[0] || null)} className="mt-1.5 block w-full text-sm file:mr-3 file:rounded-full file:border-0 file:bg-secondary file:px-3 file:py-2 file:text-xs file:font-semibold file:text-foreground hover:file:bg-secondary/80" />
                 {postFile && <p className="mt-2 break-all text-xs text-muted-foreground">{mediaIcon(fileKind(postFile))} <span className="ml-1">{postFile.name} · {(postFile.size / (1024 * 1024)).toFixed(1)} Mo</span><button type="button" onClick={() => { setPostFile(null); const input = document.getElementById("community-file") as HTMLInputElement | null; if (input) input.value = "" }} className="ml-2 underline">Retirer</button></p>}
                 <label htmlFor="post-external-url" className="mt-4 block text-sm font-medium">Lien vers un média hébergé ailleurs</label>
                 <input id="post-external-url" type="url" inputMode="url" value={postExternalUrl} onChange={(event) => setPostExternalUrl(event.target.value)} placeholder="https://… (YouTube, Drive partagé, etc.)" className="mt-1.5 w-full rounded-xl border border-border bg-card px-3 py-2.5 text-sm outline-none focus:border-primary" />
                 <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">Pour un film, une longue vidéo ou un gros MP3, privilégie un lien externe plutôt que de remplir le stockage Supabase. Vérifie les droits de partage du fichier.</p>
-                <button type="submit" disabled={loading} className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"><Send className="size-4" />{loading ? "Publication…" : `Publier dans « ${universeName(postUniverse)} »`}</button>
+                <button type="submit" disabled={loading} className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"><Send className="size-4" />{loading ? "Enregistrement…" : editingPostId ? "Enregistrer les modifications" : `Publier dans « ${universeName(postUniverse)} »`}</button>
+                {editingPostId && <button type="button" onClick={() => { resetPostForm(); setError(""); setNotice("") }} className="mt-2 inline-flex w-full items-center justify-center gap-2 rounded-xl border border-border px-4 py-2.5 text-sm font-medium hover:bg-secondary"><X className="size-4" />Annuler la modification</button>}
                 <p className="mt-3 text-xs leading-relaxed text-muted-foreground">Taille conseillée pour les petits fichiers téléversés : photo/PDF 10 Mo, MP3 20 Mo, vidéo courte 25 Mo. Au-delà, utilise un lien externe.</p>
               </form>
 
               <div>
-                <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between"><div><h3 className="font-serif text-2xl font-semibold">Les dernières traces</h3><p className="mt-1 text-sm text-muted-foreground">Les contributions rangées par univers.</p></div><div className="flex items-center gap-2"><label htmlFor="feed-universe" className="sr-only">Filtrer par univers</label><select id="feed-universe" value={feedUniverse} onChange={(event) => { setFeedUniverse(event.target.value as Universe | "all"); setFeedSection("all") }} className="max-w-[230px] rounded-full border border-border bg-background px-3 py-2 text-xs"><option value="all">Tous les univers</option>{universeOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select>{feedUniverse !== "all" && <select aria-label="Filtrer par rubrique" value={feedSection} onChange={(event) => setFeedSection(event.target.value)} className="max-w-[210px] rounded-full border border-border bg-background px-3 py-2 text-xs"><option value="all">Toutes les rubriques</option>{feedSectionOptions.map((section) => <option key={section} value={section}>{section}</option>)}</select>}<span className="rounded-full bg-secondary px-3 py-1 text-xs font-semibold">{visiblePosts.length}</span></div></div>
+                <div id="community-feed" className="mb-3 scroll-mt-8 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between"><div><h3 className="font-serif text-2xl font-semibold">Les dernières traces</h3><p className="mt-1 text-sm text-muted-foreground">Les contributions rangées par univers.</p></div><div className="flex flex-wrap items-center gap-2">{session && <button type="button" onClick={() => setFeedOnlyMine((value) => !value)} className={`rounded-full border px-3 py-2 text-xs font-semibold ${feedOnlyMine ? "border-primary bg-primary text-primary-foreground" : "border-border hover:bg-secondary"}`}>{feedOnlyMine ? "Toutes les contributions" : "Mes contributions"}</button>}<label htmlFor="feed-universe" className="sr-only">Filtrer par univers</label><select id="feed-universe" value={feedUniverse} onChange={(event) => { setFeedUniverse(event.target.value as Universe | "all"); setFeedSection("all") }} className="max-w-[230px] rounded-full border border-border bg-background px-3 py-2 text-xs"><option value="all">Tous les univers</option>{universeOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select>{feedUniverse !== "all" && <select aria-label="Filtrer par rubrique" value={feedSection} onChange={(event) => setFeedSection(event.target.value)} className="max-w-[210px] rounded-full border border-border bg-background px-3 py-2 text-xs"><option value="all">Toutes les rubriques</option>{feedSectionOptions.map((section) => <option key={section} value={section}>{section}</option>)}</select>}<span className="rounded-full bg-secondary px-3 py-1 text-xs font-semibold">{visiblePosts.length}</span></div></div>
                 {loading && posts.length === 0 ? <p className="rounded-2xl border border-border p-5 text-sm text-muted-foreground">Chargement du carnet…</p> : visiblePosts.length === 0 ? (
-                  <div className="rounded-2xl border border-dashed border-border p-6 text-center"><HeartHandshake className="mx-auto size-8 text-primary" /><h4 className="mt-3 font-semibold">Aucune contribution dans cet univers pour le moment</h4><p className="mt-1 text-sm text-muted-foreground">Dépose la première trace ou choisis « Tous les univers » pour élargir la recherche.</p></div>
+                  <div className="rounded-2xl border border-dashed border-border p-6 text-center"><HeartHandshake className="mx-auto size-8 text-primary" /><h4 className="mt-3 font-semibold">Aucune contribution ne correspond à ce filtre pour le moment</h4><p className="mt-1 text-sm text-muted-foreground">Dépose la première trace, désactive « Mes contributions » ou choisis « Tous les univers » pour élargir la recherche.</p></div>
                 ) : (
                   <div className="space-y-3">
                     {visiblePosts.map((post) => <article key={post.id} className="overflow-hidden rounded-2xl border border-border bg-background p-4 sm:p-5">
@@ -531,7 +610,7 @@ export function CommunityHub({ contributionRequest, onAuthStatusChange }: { cont
                       {post.media_url && post.media_type === "audio" && <div className="mt-4 rounded-xl bg-secondary/60 p-3"><p className="mb-2 flex items-center gap-2 text-sm font-medium"><Music2 className="size-4" /> Écouter le fichier audio</p><audio controls preload="none" src={post.media_url} className="w-full" /></div>}
                       {post.media_url && post.media_type === "document" && <a href={post.media_url} target="_blank" rel="noreferrer" className="mt-4 inline-flex items-center gap-2 rounded-full border border-border px-3 py-2 text-sm font-medium hover:bg-secondary"><FileText className="size-4" /> Ouvrir le document</a>}
                       {post.external_url && <a href={post.external_url} target="_blank" rel="noopener noreferrer" className="mt-4 inline-flex items-center gap-2 rounded-full border border-primary/25 bg-primary/5 px-3 py-2 text-sm font-semibold text-primary hover:bg-primary/10"><ExternalLinkIcon /> Ouvrir le média lié</a>}
-                      <p className="mt-4 text-xs text-muted-foreground">Déposé par {post.author_name}</p>
+                      <div className="mt-4 flex flex-wrap items-center justify-between gap-3"><p className="text-xs text-muted-foreground">Déposé par {post.author_name}</p>{session && post.author_email.toLowerCase() === session.user.email.toLowerCase() && <div className="flex flex-wrap gap-2"><button type="button" disabled={loading} onClick={() => beginEditPost(post)} className="inline-flex items-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-xs font-semibold hover:bg-secondary disabled:opacity-50"><Pencil className="size-3.5" />Modifier</button><button type="button" disabled={loading} onClick={() => void handleDeletePost(post)} className="inline-flex items-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-xs font-semibold text-destructive hover:bg-destructive/5 disabled:opacity-50"><Trash2 className="size-3.5" />Supprimer</button></div>}</div>
                     </article>)}
                   </div>
                 )}

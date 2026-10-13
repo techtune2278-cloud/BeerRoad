@@ -1,283 +1,259 @@
-// =====================================================================
-//  La Beer Road — Données des 7 plaques
-//  ---------------------------------------------------------------------
-//  Modifie librement ce fichier pour mettre à jour tes contenus.
-//  Aucun besoin de toucher au reste du code : l'interface se met à jour
-//  automatiquement à partir de ces données.
-//
-//  - `position` : coordonnées en % sur la photo (x = gauche, y = haut).
-//    Ajuste ces valeurs si les zones ne tombent pas pile sur les plaques.
-//  - `universe` : détermine la couleur et l'icône de la plaque.
-//  - `content`  : les blocs affichés dans la fenêtre (modale).
-// =====================================================================
-
 export type Universe =
-  | "fondateur"
-  | "musique"
-  | "cookiwiki"
-  | "actus"
-  | "livres"
-  | "film"
+  | "origines"
+  | "transmission"
+  | "atelier"
+  | "grenier"
+  | "kerhuon"
+  | "legendes"
+  | "avenir"
 
-export type LinkKind =
-  | "spotify"
-  | "deezer"
-  | "apple"
-  | "external"
-  | "pdf"
-  | "video"
-
-export interface PlaqueLink {
+export type PlaqueLink = {
   label: string
-  url: string
-  kind: LinkKind
+  url?: string
+  kind: "pdf" | "video" | "external" | "music"
 }
 
-export interface Album {
-  title: string
-  subtitle?: string
-  cover: string
-  audio?: string
-  links: PlaqueLink[]
-}
-
-export interface NewsItem {
-  date: string
-  title: string
-  body: string
-}
-
-export interface BookItem {
-  title: string
+export type Highlight = {
+  label: string
   description: string
-  cover: string
-  pdf?: string
 }
 
-export interface PlaqueContent {
-  /** Paragraphe(s) d'introduction affiché(s) en haut de la modale. */
-  intro?: string[]
-  /** Liste d'albums / musiques (univers Musique). */
-  albums?: Album[]
-  /** Liste de liens simples (boutons). */
-  links?: PlaqueLink[]
-  /** Fil d'actualités (univers En Vrac & Actus). */
-  news?: NewsItem[]
-  /** Livres pour enfants (univers Livres). */
-  books?: BookItem[]
-  /** Vidéo/film à intégrer (univers Film). */
-  video?: {
-    title: string
-    description?: string
-    embedUrl?: string
-    poster?: string
-  }
-  /** Petites cartes récapitulatives (univers Fondateur). */
-  highlights?: { label: string; description: string }[]
-}
-
-export interface Plaque {
-  /** Identifiant stable (utilisé pour les clés React). */
+export type Plaque = {
   id: string
-  /** Ordre le long du chemin, 1 = bas de la photo, 7 = haut. */
-  order: number
-  /** Nom affiché au survol et en titre de modale. */
   name: string
-  /** Petit sous-titre / catégorie affiché dans le badge. */
   tagline: string
-  /** Univers → pilote la couleur + l'icône. */
-  universe: Universe
-  /** Emoji décoratif du badge. */
   emoji: string
-  /** Position de la zone cliquable sur la photo, en pourcentages. */
+  universe: Universe
   position: { x: number; y: number; width: number; height: number; rotate?: number }
-  /** Contenu de la fenêtre. */
-  content: PlaqueContent
+  content: {
+    intro?: string[]
+    highlights?: Highlight[]
+    albums?: {
+      title: string
+      subtitle?: string
+      cover?: string
+      audio?: string
+      links: PlaqueLink[]
+    }[]
+    news?: { date: string; title: string; body: string; pdf?: string }[]
+    books?: { title: string; description: string; cover?: string; pdf?: string }[]
+    video?: { title: string; description?: string; embedUrl?: string }
+    links?: PlaqueLink[]
+  }
 }
 
+// SOURCE ÉDITORIALE DU SITE : noms, textes, ressources, liens et positions des 7 empreintes.
+// Pour une ressource publique, renseigne url (lien externe https://… ou fichier du dossier public /mon-fichier.pdf).
+// Pour intégrer un film dans le lecteur, renseigne content.video.embedUrl avec une URL d’intégration valide.
 export const siteMeta = {
   title: "La Beer Road",
-  emojiTitle: "🍺👣",
-  welcome:
-    "Bienvenue sur le chemin de la famille. Chaque plaque de ciment cache un petit univers : nos musiques, nos recettes, nos livres et nos histoires. Cliquez sur une empreinte pour explorer.",
-  searchPlaceholder: "Chercher un livre, une musique, CookiWiki…",
+  emojiTitle: "👣",
   heroImage: "/beer-road.jpeg",
+  searchPlaceholder: "Chercher un univers, une idée, un mot…",
+  // Dossier racine Beer Road partagé par la famille. Les sous-dossiers peuvent être ajoutés au fil du temps.
+  driveFolderUrl: "https://drive.google.com/drive/folders/1tn5NZkTjxGQHj_LJC9hVGPtB31Vh-4vq?usp=drive_link",
 }
 
 export const plaques: Plaque[] = [
-  // -------------------------------------------------------------------
-  // PLAQUE 1 — bas de la photo — FONDATEUR
-  // -------------------------------------------------------------------
   {
-    id: "fondateur",
-    order: 1,
-    name: "Le Fondateur",
-    tagline: "L'histoire de la Beer Road",
-    universe: "fondateur",
-    emoji: "🍺",
-    position: { x: 38, y: 81, width: 12, height: 8, rotate: -6 },
+    id: "origines",
+    name: "La Bobine des origines",
+    tagline: "Le film, l'album et la légende Beer Road",
+    emoji: "🎬",
+    universe: "origines",
+    position: { x: 39.0, y: 82, width: 12, height: 10.5, rotate: 1 },
     content: {
       intro: [
-        "Tout a commencé par un chemin de plaques de ciment marquées de nos empreintes, coulées un été en famille.",
-        "La Beer Road, c'est notre petit musée à ciel ouvert : chaque pas raconte une création — de la musique aux recettes, en passant par les histoires pour enfants.",
+        "Tout commence par une traversée de passage piéton qui n'aurait jamais dû entrer dans l'histoire du cinéma. Quatre gendres, quatre soifs, une radio TSF et un point de chute : Ker Huon.",
+        "La Beer Road est à la fois un film familial, un album musical et une invitation à retrouver ce qui nous rassemble. La route est physique, mais la légende n'a pas de frontières.",
       ],
       highlights: [
-        { label: "🎵 Musique", description: "Nos albums et reprises façon Abbey Road." },
-        { label: "🍳 CookiWiki", description: "Le carnet de recettes de la maison." },
-        { label: "📰 En Vrac", description: "Les coulisses et anecdotes du chemin." },
-        { label: "👣 Les P'tits Pas", description: "Livres et film pour les enfants." },
+        { label: "Le film", description: "Le récit fondateur, ses surprises, ses gags et ses retrouvailles à Ker Huon." },
+        { label: "Les quatre soifs", description: "Les mots, la fête, les défis et le style : quatre personnalités, une même aventure." },
+        { label: "Les coulisses", description: "Les scènes coupées, les bêtisiers, les détails cachés et les secrets de fabrication à ajouter au fil du temps." },
       ],
-    },
-  },
-
-  // -------------------------------------------------------------------
-  // PLAQUE 2 — MUSIQUE (Abbey Road)
-  // -------------------------------------------------------------------
-  {
-    id: "musique-1",
-    order: 2,
-    name: "Abbey Road · Vol. 1",
-    tagline: "Musique",
-    universe: "musique",
-    emoji: "🎵",
-    position: { x: 40, y: 62, width: 11, height: 7, rotate: -4 },
-    content: {
-      intro: ["Nos premiers enregistrements, à écouter en marchant sur le chemin."],
       albums: [
         {
-          title: "Premier Pas",
-          subtitle: "EP · 5 titres",
-          cover: "/albums/premier-pas.jpg",
-          audio: "",
+          title: "La Beer Road",
+          subtitle: "Le deuxième album du Grenier d'Elwood — livret et paroles",
+          cover: "/Beer_road.png",
           links: [
-            { label: "Spotify", url: "https://open.spotify.com", kind: "spotify" },
-            { label: "Deezer", url: "https://www.deezer.com", kind: "deezer" },
-            { label: "Apple Music", url: "https://music.apple.com", kind: "apple" },
+            { label: "Ouvrir le livret de l'album (PDF)", url: "/Livret_de_la_Beer_Road.pdf", kind: "pdf" },
+            { label: "Ouvrir les paroles sur Google Drive", url: "https://drive.google.com/drive/folders/1xcqEB3VeeiV5huZlIpcoAWTsvY27cngD?usp=drive_link", kind: "external" },
+            { label: "Écouter les chansons (.wav) sur Google Drive", url: "https://drive.google.com/drive/folders/1-LGw_SDDk1QqtPsA8_p9QPgd89zfrIxF?usp=drive_link", kind: "music" },
           ],
         },
       ],
-    },
-  },
-
-  // -------------------------------------------------------------------
-  // PLAQUE 3 — MUSIQUE (Abbey Road)
-  // -------------------------------------------------------------------
-  {
-    id: "musique-2",
-    order: 3,
-    name: "Abbey Road · Vol. 2",
-    tagline: "Musique",
-    universe: "musique",
-    emoji: "🎶",
-    position: { x: 39, y: 50, width: 11, height: 7, rotate: -8 },
-    content: {
-      intro: ["Les reprises et compositions récentes de la famille."],
-      albums: [
-        {
-          title: "Sentiers Sonores",
-          subtitle: "Album · 9 titres",
-          cover: "/albums/sentiers-sonores.jpg",
-          audio: "",
-          links: [
-            { label: "Spotify", url: "https://open.spotify.com", kind: "spotify" },
-            { label: "Deezer", url: "https://www.deezer.com", kind: "deezer" },
-            { label: "Apple Music", url: "https://music.apple.com", kind: "apple" },
-          ],
-        },
-      ],
-    },
-  },
-
-  // -------------------------------------------------------------------
-  // PLAQUE 4 — COOKIWIKI
-  // -------------------------------------------------------------------
-  {
-    id: "cookiwiki",
-    order: 4,
-    name: "CookiWiki",
-    tagline: "Recettes",
-    universe: "cookiwiki",
-    emoji: "🍳",
-    position: { x: 33, y: 40, width: 10, height: 6, rotate: -6 },
-    content: {
-      intro: ["Le carnet de recettes de la maison, et sa playlist pour cuisiner en musique."],
-      links: [
-        { label: "Ouvrir CookiWiki", url: "https://cookiwiki.example.com", kind: "external" },
-        { label: "Playlist de cuisine", url: "https://open.spotify.com", kind: "spotify" },
-      ],
-    },
-  },
-
-  // -------------------------------------------------------------------
-  // PLAQUE 5 — EN VRAC & ACTUS
-  // -------------------------------------------------------------------
-  {
-    id: "actus",
-    order: 5,
-    name: "En Vrac & Actus",
-    tagline: "Coulisses",
-    universe: "actus",
-    emoji: "📰",
-    position: { x: 30, y: 33, width: 9, height: 6, rotate: -4 },
-    content: {
-      news: [
-        {
-          date: "Été 2024",
-          title: "Une nouvelle plaque sur le chemin",
-          body: "On a coulé une empreinte de plus ce week-end. Le chemin grandit !",
-        },
-        {
-          date: "Printemps 2024",
-          title: "Session d'enregistrement au grenier",
-          body: "Trois nouveaux titres en boîte, sortie prévue bientôt.",
-        },
-      ],
-    },
-  },
-
-  // -------------------------------------------------------------------
-  // PLAQUE 6 — LES P'TITS PAS · LIVRES
-  // -------------------------------------------------------------------
-  {
-    id: "livres",
-    order: 6,
-    name: "Les P'tits Pas · Livres",
-    tagline: "Enfants",
-    universe: "livres",
-    emoji: "📚",
-    position: { x: 27, y: 28, width: 9, height: 5, rotate: -6 },
-    content: {
-      intro: ["Les histoires écrites et illustrées pour les enfants de la famille."],
-      books: [
-        {
-          title: "Le Chemin des Empreintes",
-          description: "Un petit conte à lire le soir, à propos d'un chemin magique.",
-          cover: "/books/chemin-empreintes.jpg",
-          pdf: "",
-        },
-      ],
-    },
-  },
-
-  // -------------------------------------------------------------------
-  // PLAQUE 7 — haut de la photo — LES P'TITS PAS · FILM
-  // -------------------------------------------------------------------
-  {
-    id: "film",
-    order: 7,
-    name: "Les P'tits Pas · Film",
-    tagline: "Enfants",
-    universe: "film",
-    emoji: "🎬",
-    position: { x: 20, y: 23, width: 9, height: 5, rotate: -8 },
-    content: {
-      intro: ["Le court-métrage de famille, tourné le long de la Beer Road."],
       video: {
-        title: "La Beer Road — Le Film",
-        description: "Un court-métrage réalisé avec les enfants.",
-        embedUrl: "",
-        poster: "/film/poster.jpg",
+        title: "Le film La Beer Road",
+        description: "Le film est conservé dans le dossier familial Google Drive. Clique pour l'ouvrir ; si Drive le demande, connecte-toi à un compte autorisé.",
       },
+      links: [
+        { label: "Ouvrir le dossier du film La Beer Road", url: "https://drive.google.com/drive/folders/1_ixkqhZkDROkBlIlgTo5EMO_pjI3oW32?usp=drive_link", kind: "video" },
+        { label: "Ouvrir les paroles sur Google Drive", url: "https://drive.google.com/drive/folders/1xcqEB3VeeiV5huZlIpcoAWTsvY27cngD?usp=drive_link", kind: "external" },
+        { label: "Écouter les chansons (.wav) sur Google Drive", url: "https://drive.google.com/drive/folders/1-LGw_SDDk1QqtPsA8_p9QPgd89zfrIxF?usp=drive_link", kind: "music" },
+      ],
+    },
+  },
+  {
+    id: "transmission",
+    name: "Les Mots qui restent",
+    tagline: "Livres, lettres et podcasts pour aller plus loin",
+    emoji: "📚",
+    universe: "transmission",
+    position: { x: 42.0, y: 62.5, width: 11, height: 7.5, rotate: -2 },
+    content: {
+      intro: [
+        "Certaines conversations méritent de durer plus longtemps qu'un repas ou qu'un séjour. Ici, les mots servent à ouvrir des questions, transmettre des idées et poursuivre les échanges commencés avec le film.",
+        "Les lettres aux filles, les lettres aux gendres, les livres et les podcasts pourront se répondre sans devoir raconter une nouvelle fois l'histoire propre à chaque foyer.",
+      ],
+      highlights: [
+        { label: "Lettres à mes filles", description: "Des textes à lire, à relire, à discuter et à transmettre." },
+        { label: "Lettres à mes gendres", description: "Des mots personnels autour de la famille, de la vie commune et de l'humour partagé." },
+        { label: "Les podcasts", description: "Des épisodes décalés ou plus profonds pour éclairer les idées derrière les histoires." },
+      ],
+      books: [
+        { title: "Les livres et textes à venir", description: "Les prochaines publications prendront place ici avec leur présentation et, si possible, une version à lire ou à écouter." },
+      ],
+      links: [
+        { label: "Lettres à mes filles", kind: "pdf" },
+        { label: "Lettres à mes gendres", kind: "pdf" },
+        { label: "Lire les livres et textes", kind: "pdf" },
+        { label: "Écouter les podcasts", kind: "external" },
+      ],
+    },
+  },
+  {
+    id: "atelier",
+    name: "L'Atelier des possibles",
+    tagline: "Les applications imaginées pour la tribu",
+    emoji: "🧪",
+    universe: "atelier",
+    position: { x: 39.5, y: 51, width: 11, height: 6.0, rotate: -5 },
+    content: {
+      intro: [
+        "Une idée peut devenir un outil utile. Cet atelier rassemble les applications conçues pour simplifier le quotidien, cuisiner, mieux gérer les provisions ou faire naître de nouveaux usages familiaux.",
+        "Ce n'est pas une vitrine de technologie pour la technologie : chaque application doit répondre à un besoin concret et rendre service.",
+      ],
+      highlights: [
+        { label: "CookiWiki", description: "L'univers des recettes et de la cuisine de Mamifa." },
+        { label: "Frosti", description: "La gestion des congélateurs et de ce qu'ils contiennent." },
+        { label: "Cellio", description: "Une application familiale à présenter ici avec ses usages et son accès." },
+        { label: "Mealio", description: "Un autre outil de la famille des applications de cuisine et d'organisation." },
+      ],
+      links: [
+        { label: "Ouvrir CookiWiki", kind: "external" },
+        { label: "Ouvrir Frosti", kind: "external" },
+        { label: "Ouvrir Cellio", kind: "external" },
+        { label: "Ouvrir Mealio", kind: "external" },
+      ],
+    },
+  },
+  {
+    id: "grenier",
+    name: "Le Grenier d'Elwood",
+    tagline: "Les albums, les chansons et les histoires derrière la musique",
+    emoji: "🎸",
+    universe: "grenier",
+    position: { x: 34.0, y: 40.8, width: 9.5, height: 4.4, rotate: -8 },
+    content: {
+      intro: [
+        "Le Grenier d'Elwood est la maison des créations musicales : les albums, les titres, les paroles et les histoires qui les ont fait naître.",
+        "La Beer Road est le deuxième album. Un album est déjà sorti et deux autres sont en préparation : cet univers est donc appelé à grandir au fil des sorties.",
+      ],
+      highlights: [
+        { label: "Écouter", description: "Les liens vers les plateformes musicales seront rassemblés ici, album par album." },
+        { label: "Comprendre", description: "Les histoires des morceaux, les paroles et les anecdotes de création." },
+        { label: "Suivre les prochaines sorties", description: "Un espace vivant pour annoncer les nouveaux projets musicaux du Grenier." },
+      ],
+      links: [
+        { label: "Chansons du Grenier d’Elwood sur les plateformes", url: "https://linktr.ee/LeGrenierElwood", kind: "music" },
+        { label: "Paroles des chansons sur Google Drive", url: "https://drive.google.com/drive/folders/1xcqEB3VeeiV5huZlIpcoAWTsvY27cngD?usp=drive_link", kind: "external" },
+        { label: "Lire le livret La Beer Road (PDF)", url: "/Livret_de_la_Beer_Road.pdf", kind: "pdf" },
+        { label: "Troisième album — en préparation", kind: "music" },
+        { label: "Quatrième album — en préparation", kind: "music" },
+        { label: "Spotify — tous les albums", kind: "music" },
+        { label: "YouTube Music — tous les albums", kind: "music" },
+        { label: "Apple Music — tous les albums", kind: "music" },
+        { label: "Deezer — tous les albums", kind: "music" },
+      ],
+    },
+  },
+  {
+    id: "kerhuon",
+    name: "La Maison apprivoisée",
+    tagline: "Les astuces pour bien vivre à Ker Huon",
+    emoji: "🏡",
+    universe: "kerhuon",
+    position: { x: 29.7, y: 34, width: 9.5, height: 4.0, rotate: -10 },
+    content: {
+      intro: [
+        "Ker Huon est le point de départ physique de la Beer Road, mais pas sa limite. Ce pas rassemble tout ce qui aide chacun à se sentir chez lui, à prendre soin de la maison et à faciliter la vie collective.",
+        "Des tutoriels courts, des astuces et des règles simples éviteront de devoir réexpliquer les mêmes choses à chaque séjour.",
+      ],
+      highlights: [
+        { label: "Les tutos maison", description: "Chauffage, appareils, équipements, eau, électricité et petits dépannages." },
+        { label: "Le jardin et les extérieurs", description: "Les gestes utiles pour profiter des lieux et en prendre soin." },
+        { label: "Les bons réflexes", description: "Arrivée, départ, rangement, tri et informations pratiques communes." },
+      ],
+      links: [
+        { label: "Tutoriels vidéo de la maison", kind: "video" },
+        { label: "Consignes d’arrivée et de départ", kind: "pdf" },
+        { label: "Équipements et dépannage", kind: "pdf" },
+        { label: "Jardin et extérieurs", kind: "external" },
+      ],
+    },
+  },
+  {
+    id: "legendes",
+    name: "Le Cabinet des légendes",
+    tagline: "Les codes, les rituels et les blagues que l'on partage",
+    emoji: "🍻",
+    universe: "legendes",
+    position: { x: 23.5, y: 29, width: 8.5, height: 3.8, rotate: -7 },
+    content: {
+      intro: [
+        "Chaque tribu fabrique peu à peu ses expressions, ses personnages, ses traditions et ses histoires impossibles à raconter aux gens de l'extérieur. Ici, on conserve la culture commune sans empiéter sur les albums privés de chaque foyer.",
+        "Le mot « ermifugé », les quatre soifs, le décret communal de la Beer Road ou les règles très discutables de la tireuse méritent un endroit où continuer à vivre.",
+      ],
+      highlights: [
+        { label: "Le dictionnaire de la tribu", description: "Expressions cultes, surnoms, traductions improbables et phrases à ne surtout pas sortir en public." },
+        { label: "Les rites de Ker Huon", description: "Les habitudes et rituels des retrouvailles qui font sourire tout le monde." },
+        { label: "La boîte à anecdotes", description: "Photos, vidéos, notes, enregistrements audio et histoires ajoutés par toute la famille." },
+        { label: "Le musée du presque-raté", description: "Bêtisiers, ratés de tournage et photos improbables — les coulisses qu'on n'a pas mises dans le film." },
+        { label: "La boîte à sons", description: "Expressions cultes, messages vocaux, mini-podcasts et ambiances sonores enregistrées par la tribu." },
+        { label: "Le quiz Beer Road", description: "Des questions pour tester la mémoire de la tribu — et désigner le prochain payeur de pinte." },
+      ],
+      links: [
+        { label: "Le dictionnaire de la tribu", kind: "external" },
+        { label: "Le quiz Beer Road", kind: "external" },
+        { label: "Les anecdotes partagées", kind: "external" },
+      ],
+    },
+  },
+  {
+    id: "avenir",
+    name: "La Route des lendemains",
+    tagline: "Projets communs, agenda et messages pour le futur",
+    emoji: "🧭",
+    position: { x: 19, y: 24.5, width: 8.5, height: 3.5, rotate: -8 },
+    universe: "avenir",
+    content: {
+      intro: [
+        "La Beer Road n'est pas un monument terminé : c'est une première étape. Ce dernier pas regarde devant lui et donne à chacun la possibilité de proposer une idée, de préparer les prochaines retrouvailles ou de lancer un projet commun.",
+        "Il pourra aussi accueillir une capsule temporelle numérique : des messages audio, des vidéos et des lettres destinées à être redécouverts dans quelques années, en écho au rendez-vous imaginé pour Rose et Romy en 2045.",
+      ],
+      highlights: [
+        { label: "L'agenda de la tribu", description: "Séjours à Ker Huon, anniversaires, rendez-vous et événements familiaux communs." },
+        { label: "Les chantiers ouverts", description: "Des projets proposés par chacun, avec des idées, des volontaires et les prochaines étapes." },
+        { label: "Les défis de la tribu", description: "Un défi audio, une mini-vidéo, une recette collective, un quiz ou une création à plusieurs mains." },
+        { label: "La capsule temporelle", description: "Des messages à laisser aux enfants et petits-enfants pour qu'ils les découvrent plus tard." },
+      ],
+      links: [
+        { label: "Agenda familial partagé", kind: "external" },
+        { label: "Proposer un projet commun", kind: "external" },
+        { label: "Capsule temporelle — messages pour plus tard", kind: "external" },
+      ],
     },
   },
 ]

@@ -1,10 +1,34 @@
-# La Beer Road — V6 : version visible et statut de connexion en haut de page
+# La Beer Road — V7 : contributions par sous-rubrique et gestion par leur auteur
+
+## Nouveautés V7
+
+- Chaque sous-rubrique de la fiche d'un univers propose **Voir les contributions** et **Ajouter**. « Voir » ouvre le carnet filtré sur l'univers et la rubrique choisie ; « Ajouter » ouvre le formulaire déjà préclassé.
+- Une publication apparaît dans **Le carnet vivant de la tribu → Les dernières traces**, avec le nom de l'univers et la sous-rubrique. Les filtres permettent de retrouver les publications d'une rubrique, d'un univers ou de toute la tribu.
+- Chaque auteur connecté voit les boutons **Modifier** et **Supprimer** sur ses propres publications. Il peut modifier le titre, le texte, l'univers, la rubrique, le lien et le fichier joint, ou supprimer sa publication. Il ne voit pas ces commandes sur les publications des autres membres. Les politiques RLS du SQL Supabase doivent être appliquées pour que cette restriction soit aussi garantie côté serveur.
+- Le filtre **Mes contributions** permet de retrouver ses publications personnelles. Le carnet affiche toujours les contributions, pas des réponses imbriquées à d'autres publications : un « commentaire » est une contribution autonome rattachée à une sous-rubrique.
+- Les ressources permanentes sont présentées directement dans leur univers. Le dossier racine Google Drive n'est pas répété dans toutes les fiches : il apparaît une seule fois dans le premier pas, près du film. Les liens du film, des paroles et des chansons sont présentés une seule fois chacun.
+- Un lien manquant s'intitule désormais **Proposer un lien** : cela publie une proposition dans le carnet, mais ne modifie pas automatiquement le catalogue du site. Pour ajouter un raccourci permanent, il faut aussi ajouter/modifier l'URL dans `src/data/beerRoadData.ts`.
+
+## Où voit-on les contributions ?
+
+Après publication, le contenu apparaît sous **Le carnet vivant de la tribu**, dans la colonne **Les dernières traces**. La carte indique l'univers, la sous-rubrique, la date et l'auteur, puis affiche le texte et/ou le média. Depuis la fiche d'un univers, le bouton **Voir les contributions** sélectionne automatiquement le bon filtre. Si la personne n'est pas connectée, elle doit se connecter avant de voir les publications familiales.
+
+## Modifier ou supprimer une contribution
+
+1. Connecte-toi avec la même adresse qui a publié le contenu.
+2. Dans le carnet, retrouve la contribution. Utilise **Mes contributions** pour réduire la liste à tes propres publications.
+3. Clique **Modifier** pour changer les champs puis **Enregistrer les modifications** ; ou clique **Supprimer** et confirme la suppression.
+4. Les boutons d'édition ne sont proposés que si l'adresse de la session correspond à `author_email`. Supabase vérifie également cette règle via ses politiques de sécurité.
+
+Le stockage des pièces jointes est privé dans Supabase. Si une publication contient une image, une vidéo, un son ou un document téléversé, la modification peut conserver le fichier, le remplacer ou le retirer. Pour les gros médias, utilise plutôt un lien partagé Google Drive.
+
+---
 
 ## Ce que contient cette version
 
 La page d'accueil conserve la photo du chemin de Ker Huon et ses sept empreintes. L'ordre physique est maintenant **du bas vers le haut** : 1. La Bobine des origines, 2. Les Mots qui restent, 3. L'Atelier des possibles, 4. Le Grenier d'Elwood, 5. La Maison apprivoisée, 6. Le Cabinet des légendes, 7. La Route des lendemains.
 
-Chaque fiche présente des textes et un bloc **Accès et ressources**. Les liens renseignés s'ouvrent directement. Les liens encore inconnus proposent désormais un bouton **Ajouter le lien** qui prépare une contribution classée dans l'univers et la rubrique précis. Les blocs thématiques sont eux aussi cliquables : un clic ouvre le formulaire, pré-sélectionne la bonne rubrique et propose son nom comme titre. L'agenda dispose d'un bouton dans l'en-tête et dans le dernier univers, même si la connexion n'est pas encore faite.
+Chaque fiche présente ses textes, ses sous-rubriques et les raccourcis utiles. Les blocs de sous-rubriques permettent de consulter les contributions existantes ou d'en ajouter une nouvelle. Les ressources permanentes s'ouvrent directement ; un lien encore inconnu peut être proposé dans le carnet. L'agenda dispose d'un bouton dans l'en-tête et dans le dernier univers, même si la connexion n'est pas encore faite.
 
 ## Où modifier les contenus et les libellés des univers
 
@@ -20,8 +44,8 @@ Dans ce fichier, chaque bloc `id: "origines"`, `id: "transmission"`, etc. contie
 - `content.video.embedUrl` : l'URL d'intégration vidéo, par exemple une URL YouTube de type `https://www.youtube.com/embed/ID_VIDEO` ;
 - `content.albums` : pochette, titre, description et ressources d'un album ;
 - `content.books` : titres, description, couverture et PDF des livres ;
-- `content.links` : les raccourcis affichés dans « Accès et ressources ». Quand `url` est renseignée, le raccourci ouvre directement la ressource. Sans `url`, le bouton **Ajouter le lien** prépare une contribution à cette rubrique.
-- `siteMeta.driveFolderUrl` contient le dossier racine **Beer Road** sur Google Drive. Le bouton « Drive familial » est visible en haut de la page et le même accès figure dans les fenêtres des univers. Tu peux créer des sous-dossiers dans Drive au fil du temps sans modifier ce lien racine ; pour les accès directs au film, aux chansons et aux paroles, leurs liens spécifiques sont déjà renseignés ci-dessous.
+- `content.links` : les raccourcis affichés dans « Raccourcis et ressources ». Quand `url` est renseignée, le raccourci ouvre directement la ressource. Sans `url`, le bouton **Proposer un lien** crée une proposition dans le carnet ; il ne modifie pas automatiquement la fiche permanente.
+- `siteMeta.driveFolderUrl` conserve l’URL du dossier racine si elle est utile ailleurs, mais le dossier général n’est plus répété en bas de chaque univers. Les liens directs vers le film, les chansons et les paroles sont présentés là où ils sont pertinents.
 
 Pour rendre un raccourci actif, ajoute sa vraie URL au champ `url`. Exemple :
 
@@ -36,7 +60,7 @@ Pour un fichier léger livré avec le site, place-le dans `public/` puis utilise
 ### Autres emplacements des libellés
 
 - `components/beer-road.tsx` : titre principal de la page, texte d'accueil, recherche, libellés autour du chemin et pied de page.
-- `components/plaque-modal.tsx` : présentation d'une fiche, titre « Accès et ressources », libellés des boutons dans les fenêtres d'univers.
+- `components/plaque-modal.tsx` : présentation d'une fiche, titre « Raccourcis et ressources », boutons « Voir les contributions » et « Ajouter ».
 - `components/community-hub.tsx` : connexion, carnet vivant, publication de contenu, agenda, formulaires et messages de confirmation.
 - `app/layout.tsx` : titre de l'onglet du navigateur et description générale du site.
 - `app/globals.css` : style général, couleurs, polices, espacements.

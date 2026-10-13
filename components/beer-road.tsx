@@ -28,7 +28,7 @@ function searchText(plaque: Plaque) {
 
 type AuthStatus = { status: "checking" | "connected" | "disconnected"; label: string; email?: string }
 
-const SITE_VERSION = "6.0"
+const SITE_VERSION = "V1.0"
 
 export function BeerRoad() {
   const [authStatus, setAuthStatus] = useState<AuthStatus>({ status: "checking", label: "Vérification de la connexion…" })
@@ -38,7 +38,7 @@ export function BeerRoad() {
   const [active, setActive] = useState<Plaque | null>(null)
   const [query, setQuery] = useState("")
   const [isPlaying, setIsPlaying] = useState(false)
-  const [communityRequest, setCommunityRequest] = useState<{ universe: Universe; section: string; target: "carnet" | "agenda"; nonce: number }>({ universe: "legendes", section: "Contributions générales", target: "carnet", nonce: 0 })
+  const [communityRequest, setCommunityRequest] = useState<{ universe: Universe; section: string; target: "carnet" | "agenda" | "feed"; nonce: number }>({ universe: "legendes", section: "Contributions générales", target: "carnet", nonce: 0 })
   const audioRef = useRef<HTMLAudioElement | null>(null)
 
   const trimmedQuery = query.trim().toLocaleLowerCase("fr-FR")
@@ -55,6 +55,11 @@ export function BeerRoad() {
 
   const handleOpenAgenda = () => {
     setCommunityRequest((previous) => ({ universe: "avenir", section: "Agenda familial", target: "agenda", nonce: previous.nonce + 1 }))
+    setActive(null)
+  }
+
+  const handleViewContributions = (universe: Universe, section: string) => {
+    setCommunityRequest((previous) => ({ universe, section, target: "feed", nonce: previous.nonce + 1 }))
     setActive(null)
   }
 
@@ -80,7 +85,7 @@ export function BeerRoad() {
       <header className="mx-auto flex max-w-4xl flex-col items-center gap-4 text-center">
         <div className="flex w-full flex-wrap items-center justify-between gap-2">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="inline-flex items-center rounded-full border border-border bg-card/90 px-3 py-2 text-xs font-semibold text-muted-foreground">Version {SITE_VERSION}</span>
+            <span className="inline-flex items-center rounded-full border border-border bg-card/90 px-3 py-2 text-xs font-semibold text-muted-foreground">{SITE_VERSION}</span>
             <span role="status" aria-live="polite" className={`inline-flex min-h-9 items-center gap-2 rounded-full border px-3 py-2 text-xs font-semibold ${authStatus.status === "connected" ? "border-emerald-600/25 bg-emerald-600/10 text-emerald-800 dark:text-emerald-300" : "border-border bg-card/90 text-muted-foreground"}`}>
               {authStatus.status === "checking" ? <LoaderCircle className="size-3.5 animate-spin" aria-hidden="true" /> : <CircleUserRound className="size-3.5" aria-hidden="true" />}
               <span>{authStatus.label}</span>
@@ -152,7 +157,7 @@ export function BeerRoad() {
         <p className="text-xs leading-relaxed text-muted-foreground">La Beer Road · Ker Huon, Runan · Un chemin qui se prolonge de génération en génération.</p>
       </footer>
 
-      {active && <PlaqueModal plaque={active} onClose={() => setActive(null)} onContribute={handleContribute} onOpenAgenda={handleOpenAgenda} />}
+      {active && <PlaqueModal plaque={active} onClose={() => setActive(null)} onContribute={handleContribute} onViewContributions={handleViewContributions} onOpenAgenda={handleOpenAgenda} />}
     </main>
   )
 }
