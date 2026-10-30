@@ -114,15 +114,7 @@ export const plaques: Plaque[] = [
         { label: "Lettres à mes gendres", description: "Des mots personnels autour de la famille, de la vie commune et de l'humour partagé." },
         { label: "Les podcasts", description: "Des épisodes décalés ou plus profonds pour éclairer les idées derrière les histoires." },
       ],
-      books: [
-        { title: "Les livres et textes à venir", description: "Les prochaines publications prendront place ici avec leur présentation et, si possible, une version à lire ou à écouter." },
-      ],
-      links: [
-        { label: "Lettres à mes filles", kind: "pdf" },
-        { label: "Lettres à mes gendres", kind: "pdf" },
-        { label: "Lire les livres et textes", kind: "pdf" },
-        { label: "Écouter les podcasts", kind: "external" },
-      ],
+
     },
   },
   {

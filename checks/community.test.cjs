@@ -30,7 +30,7 @@ const settle=()=>act(async()=>{await new Promise(r=>setTimeout(r,10))})
 async function mount(fetcher, connected=true){
  statuses=[];observers=[];window.localStorage.clear()
  if(connected)window.localStorage.setItem('beerroad-family-session-v1',JSON.stringify(session))
- global.fetch=fetcher
+ global.fetch=(url,opts)=>new URL(url).pathname.endsWith("/rpc/is_media_admin") ? Promise.resolve(json(false)) : fetcher(url,opts)
  root=createRoot(document.getElementById('root'))
  await act(async()=>{root.render(React.createElement(CommunityHub,{contributionRequest:base,onAuthStatusChange:s=>statuses.push(s)}))})
  await settle()

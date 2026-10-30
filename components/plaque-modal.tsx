@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react"
 import Image from "next/image"
+import { MediaShelf } from "./media/media-shelf"
 import {
   ArrowUpRight,
   PlusCircle,
@@ -49,12 +50,14 @@ function LinkButton({ link, onMissing }: { link: PlaqueLink; onMissing: () => vo
 
 export function PlaqueModal({
   plaque,
+  connected = false,
   onClose,
   onContribute,
   onViewContributions,
   onOpenAgenda,
 }: {
   plaque: Plaque
+  connected?: boolean
   onClose: () => void
   onContribute: (universe: Universe, section?: string) => void
   onViewContributions: (universe: Universe, section: string) => void
@@ -74,6 +77,7 @@ export function PlaqueModal({
 
   const Icon = universeIcon[plaque.universe]
   const { content } = plaque
+  const mediaCollections: Record<string, string> = { "Lettres à mes filles": "lettres-filles", "Lettres à mes gendres": "lettres-gendres", "Les podcasts": "podcasts" }
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-foreground/55 p-0 backdrop-blur-sm sm:items-center sm:p-4" onClick={onClose} role="presentation">
@@ -89,7 +93,9 @@ export function PlaqueModal({
         <div className="flex flex-col gap-6 px-5 py-6 sm:px-7 sm:py-7">
           {content.intro?.map((paragraph, index) => <p key={index} className="leading-relaxed text-muted-foreground">{paragraph}</p>)}
 
-          {content.highlights && <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">{content.highlights.map((highlight) => <div key={highlight.label} className="rounded-2xl border border-border bg-secondary/50 p-4"><div className="font-semibold">{highlight.label}</div><p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">{highlight.description}</p><div className="mt-4 flex flex-wrap gap-2"><button type="button" onClick={() => onViewContributions(plaque.universe, highlight.label)} className="inline-flex items-center gap-1.5 rounded-full border border-border bg-background px-3 py-2 text-xs font-semibold transition hover:bg-secondary"><Eye className="size-3.5" /> Voir les contributions</button><button type="button" onClick={() => onContribute(plaque.universe, highlight.label)} className="inline-flex items-center gap-1.5 rounded-full bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground transition hover:opacity-90"><PlusCircle className="size-3.5" /> Ajouter</button></div></div>)}</div>}
+          {content.highlights && <div className={`grid grid-cols-1 gap-3 ${plaque.universe === "transmission" ? "" : "sm:grid-cols-2"}`}>{content.highlights.map((highlight) => <div key={highlight.label} className="rounded-2xl border border-border bg-secondary/50 p-4"><div className="font-semibold">{highlight.label}</div><p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">{highlight.description}</p>{plaque.universe === "transmission" && mediaCollections[highlight.label] && <MediaShelf collection={mediaCollections[highlight.label]} connected={connected} onConnect={() => onContribute(plaque.universe, highlight.label)} />}<div className="mt-4 flex flex-wrap gap-2"><button type="button" onClick={() => onViewContributions(plaque.universe, highlight.label)} className="inline-flex items-center gap-1.5 rounded-full border border-border bg-background px-3 py-2 text-xs font-semibold transition hover:bg-secondary"><Eye className="size-3.5" /> Voir les contributions</button><button type="button" onClick={() => onContribute(plaque.universe, highlight.label)} className="inline-flex items-center gap-1.5 rounded-full bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground transition hover:opacity-90"><PlusCircle className="size-3.5" /> Ajouter</button></div></div>)}</div>}
+
+          <details className="rounded-2xl border border-border p-4"><summary className="cursor-pointer font-semibold">{plaque.universe === "transmission" ? "Autres livres et ressources" : "La médiathèque"}</summary><MediaShelf collection={plaque.universe} connected={connected} onConnect={() => onContribute(plaque.universe)} /></details>
 
           {content.albums?.map((album) => <div key={album.title} className="flex flex-col gap-4 rounded-2xl border border-border bg-secondary/40 p-4 sm:flex-row sm:p-5">
             <div className="relative aspect-square w-full shrink-0 overflow-hidden rounded-xl bg-muted sm:w-36"><Image src={album.cover || "/placeholder.svg"} alt={`Pochette de ${album.title}`} fill sizes="144px" className="object-cover" /></div>

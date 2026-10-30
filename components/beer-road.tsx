@@ -160,7 +160,7 @@ export function BeerRoad() {
         <p className="text-xs leading-relaxed text-muted-foreground">La Beer Road · Ker Huon, Runan · Un chemin qui se prolonge de génération en génération.</p>
       </footer>
 
-      {active && <PlaqueModal plaque={active} onClose={() => setActive(null)} onContribute={handleContribute} onViewContributions={handleViewContributions} onOpenAgenda={handleOpenAgenda} />}
+      {active && <PlaqueModal key={`${active.id}-${authStatus.email || authStatus.status}`} connected={authStatus.status === "connected"} plaque={active} onClose={() => setActive(null)} onContribute={handleContribute} onViewContributions={handleViewContributions} onOpenAgenda={handleOpenAgenda} />}
     </main>
   )
 }

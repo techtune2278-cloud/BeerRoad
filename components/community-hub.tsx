@@ -1,5 +1,6 @@
 "use client"
 import { useEffect, useState } from "react"
+import { MediaAdmin } from "./media/media-admin"
 import { AuthPanel } from "./community/auth-panel"
 import { EventsPanel } from "./community/events-panel"
 import { PostsPanel } from "./community/posts-panel"
@@ -82,6 +83,7 @@ export function CommunityHub({
               Déconnexion
             </button>
           </div>
+          <MediaAdmin key={`media-${auth.session.user.id}`} />
           <div hidden={tab !== "carnet"}>
             <PostsPanel
               key={`posts-${auth.session.user.id}`}
