@@ -212,5 +212,6 @@ insert into public.family_members (email, display_name) values
   ('v.cocoual@gmail.com', 'Vincent'),
   ('laure.lemoine2278@gmail.com', 'Laure'),
   ('emmanuelle2278@hotmail.fr', 'Emmanuelle'),
-  ('robinhenry78@gmail.com', 'Robin')
+  ('robinhenry78@gmail.com', 'Robin'),
+  ('mlmehdy@gmail.com', 'Mehdy')
 on conflict (email) do update set display_name = excluded.display_name;

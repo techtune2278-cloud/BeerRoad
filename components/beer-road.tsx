@@ -2,6 +2,7 @@
 
 import { useCallback, useMemo, useRef, useState } from "react"
 import Image from "next/image"
+import { SITE_VERSION } from "@/lib/version"
 import {
   ArrowDown,
   CalendarDays,
@@ -15,6 +16,7 @@ import {
 } from "lucide-react"
 import { plaques, siteMeta, type Plaque, type Universe } from "@/src/data/beerRoadData"
 import { PlaqueModal } from "@/components/plaque-modal"
+import { PwaInstallButton } from "@/components/pwa-install-button"
 import { CommunityHub } from "@/components/community-hub"
 
 function searchText(plaque: Plaque) {
@@ -28,7 +30,7 @@ function searchText(plaque: Plaque) {
 
 type AuthStatus = { status: "checking" | "connected" | "disconnected"; label: string; email?: string }
 
-const SITE_VERSION = "V1.0"
+
 
 export function BeerRoad() {
   const [authStatus, setAuthStatus] = useState<AuthStatus>({ status: "checking", label: "Vérification de la connexion…" })
@@ -97,6 +99,7 @@ export function BeerRoad() {
             {isPlaying ? <Volume2 className="size-4 animate-pulse text-primary" /> : <VolumeX className="size-4 text-muted-foreground" />}
             <span className="hidden sm:inline">{isPlaying ? "Ambiance ON" : "Ambiance"}</span>
           </button>
+          <PwaInstallButton />
           <button type="button" onClick={handleOpenAgenda} className="inline-flex items-center justify-center gap-2 rounded-full border border-border bg-card/90 px-3 py-2 text-xs font-semibold shadow-sm transition hover:bg-secondary"><CalendarDays className="size-4" /> Agenda familial</button>
           <button type="button" onClick={() => handleContribute("legendes")} className="inline-flex items-center justify-center gap-2 rounded-full bg-primary px-4 py-2 text-xs font-semibold text-primary-foreground shadow-sm transition hover:opacity-90"><Footprints className="size-4" /> Participer</button>
           </div>

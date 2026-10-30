@@ -1,0 +1,6 @@
+{
+ "extends": "../tsconfig.json",
+ "compilerOptions": {"incremental": false},
+ "include": ["data-contract.d.ts", "../components/community-hub.tsx", "../components/community/**/*", "../lib/family-*.ts", "../lib/version.ts"],
+ "exclude": ["../node_modules"]
+}

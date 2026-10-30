@@ -1,0 +1,21 @@
+{
+  "id": "/",
+  "name": "La Beer Road — le patrimoine vivant de la tribu",
+  "short_name": "Beer Road",
+  "description": "Sept empreintes, sept univers pour partager les créations, les idées, les traditions et les projets communs de la famille.",
+  "lang": "fr-FR",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
+  "orientation": "any",
+  "background_color": "#f2ead6",
+  "theme_color": "#e9e3cf",
+  "categories": ["lifestyle", "social"],
+  "prefer_related_applications": false,
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-512-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
