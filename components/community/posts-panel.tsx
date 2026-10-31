@@ -20,6 +20,7 @@ import { PostMedia } from "./post-media"
 import {
   ExternalLinkIcon,
   fileKind,
+  isRecommendation,
   sectionsForUniverse,
   universeName,
   universeOptions,
@@ -136,7 +137,7 @@ export function PostsPanel({
     setPostTitle(
       contributionRequest.target === "feed"
         ? ""
-        : contributionRequest.section === "Contributions générales"
+        : (contributionRequest.section === "Contributions générales" || isRecommendation(contributionRequest.universe,contributionRequest.section))
           ? ""
           : contributionRequest.section,
     )
@@ -239,6 +240,7 @@ export function PostsPanel({
             "Cette contribution possède déjà un fichier. Pour le remplacer par un lien externe, coche d'abord « Retirer le fichier actuel ».",
           )
       }
+      if (isRecommendation(postUniverse,postSection) && !postBody.trim()) throw new Error("Ajoute un petit commentaire pour expliquer ta recommandation.")
       if (!postTitle.trim()) throw new Error("Donne un titre à ta contribution.")
       const existingPost = editingPostId ? editingPost : null
       const hasExistingMedia = Boolean(existingPost?.media_path && !removeExistingMedia)

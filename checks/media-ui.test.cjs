@@ -41,3 +41,15 @@ test('admin: modification et masquage préservent le fichier',async()=>{
  await act(async()=>document.querySelector('form').dispatchEvent(new window.Event('submit',{bubbles:true,cancelable:true})));await settle()
  const save=calls.find(c=>c[0]==='save');assert.ok(save);assert.equal(save[1].published,false);assert.equal(save[1].storage_path,'a/ep.mp3');assert.equal(save[2],'1')
 })
+test('Atelier : accès en ligne et téléchargement distincts',async()=>{
+ const appApi=require('../lib/application-links.ts');appApi.listApplicationLinks=async()=>[{slug:'mealio',open_url:'https://mealio.test/',download_url:'https://files.test/mealio.zip'}]
+ const {AppCatalog}=require('../components/media/app-catalog.tsx')
+ await mount(AppCatalog,{connected:true})
+ assert.equal(document.querySelector('a[href="https://mealio.test/"]').textContent,'Ouvrir l’application')
+ assert.equal(document.querySelector('a[href="https://files.test/mealio.zip"]').textContent,'Télécharger')
+ assert.ok(document.body.textContent.includes('Téléchargement à venir'))
+})
+test('Atelier : les liens privés ne sont pas chargés sans connexion',async()=>{
+ const appApi=require('../lib/application-links.ts');let fetched=0;appApi.listApplicationLinks=async()=>{fetched++;return []}
+ const {AppCatalog}=require('../components/media/app-catalog.tsx');await mount(AppCatalog,{connected:false});assert.equal(fetched,0)
+})

@@ -1,120 +1,61 @@
 "use client"
-
-import { useEffect, useRef } from "react"
-import Image from "next/image"
-import { MediaShelf } from "./media/media-shelf"
-import {
-  ArrowUpRight,
-  PlusCircle,
-  BookOpen,
-  CalendarDays,
-  Beer,
-  Clapperboard,
-  CookingPot,
-  ExternalLink,
-  Eye,
-  FileText,
-  House,
-  Music2,
-  Newspaper,
-  PlayCircle,
-  Route,
-  X,
-} from "lucide-react"
-import type { LucideIcon } from "lucide-react"
-import { siteMeta, type Plaque, type PlaqueLink, type Universe } from "@/src/data/beerRoadData"
-
-const universeIcon: Record<Universe, LucideIcon> = {
-  origines: Clapperboard,
-  transmission: BookOpen,
-  atelier: CookingPot,
-  grenier: Music2,
-  kerhuon: House,
-  legendes: Beer,
-  avenir: Route,
-}
-
-function LinkButton({ link, onMissing }: { link: PlaqueLink; onMissing: () => void }) {
-  const icon = link.kind === "pdf" ? <FileText className="size-4" /> : link.kind === "video" ? <PlayCircle className="size-4" /> : link.kind === "external" ? <ExternalLink className="size-4" /> : <Music2 className="size-4" />
-  if (!link.url) {
-    return <button type="button" onClick={onMissing} title={`Proposer un lien pour « ${link.label} » dans le carnet de la tribu`} className="inline-flex items-center gap-2 rounded-full border border-dashed border-primary/40 bg-primary/5 px-4 py-2 text-sm font-medium text-primary transition hover:bg-primary/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"><PlusCircle className="size-4" /><span>Proposer un lien</span><span className="rounded-full bg-background px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide">{link.label}</span></button>
+import { useEffect, useRef, useState } from 'react'
+import { BookOpen, CalendarDays, Beer, Clapperboard, CookingPot, Music2, House, Route, X } from 'lucide-react'
+import { MediaShelf } from './media/media-shelf'
+import { AppCatalog } from './media/app-catalog'
+import { SectionPreview } from './community/section-preview'
+import { sectionsForUniverse } from './community/shared'
+import type { Plaque, Universe } from '@/src/data/beerRoadData'
+const icons={origines:Clapperboard,transmission:BookOpen,atelier:CookingPot,grenier:Music2,kerhuon:House,legendes:Beer,avenir:Route}
+const button='inline-flex items-center justify-center rounded-full border border-border px-4 py-2 text-sm font-semibold hover:bg-secondary'
+export function PlaqueModal({plaque,connected=false,onClose,onContribute,onViewContributions,onOpenAgenda}:{plaque:Plaque;connected?:boolean;onClose:()=>void;onContribute:(universe:Universe,section?:string)=>void;onViewContributions:(universe:Universe,section:string)=>void;onOpenAgenda:()=>void}) {
+ const dialog=useRef<HTMLDivElement>(null),close=useRef<HTMLButtonElement>(null),closeAction=useRef(onClose)
+ closeAction.current=onClose
+ const [section,setSection]=useState('Contributions générales'),[recommendation,setRecommendation]=useState('Films qu’on aime')
+ useEffect(()=>{
+  const previous=document.activeElement as HTMLElement|null,overflow=document.body.style.overflow
+  close.current?.focus();document.body.style.overflow='hidden'
+  const key=(event:KeyboardEvent)=>{
+   if(event.key==='Escape'){event.preventDefault();closeAction.current()}
+   if(event.key==='Tab'){
+    const nodes=Array.from(dialog.current?.querySelectorAll<HTMLElement>('a[href],button:not(:disabled),select,input,textarea,[tabindex="0"]')||[]).filter(n=>n.getClientRects().length>0)
+    const first=nodes[0],last=nodes[nodes.length-1]
+    if(event.shiftKey&&document.activeElement===first){event.preventDefault();last?.focus()}
+    else if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first?.focus()}
+   }
   }
-  const isInternal = link.url.startsWith("/")
-  const openNewTab = !isInternal || link.kind === "pdf"
-  return (
-    <a href={link.url} target={openNewTab ? "_blank" : undefined} rel={openNewTab ? "noopener noreferrer" : undefined} className="inline-flex items-center gap-2 rounded-full border border-border bg-secondary px-4 py-2 text-sm font-medium text-secondary-foreground transition-colors hover:bg-primary hover:text-primary-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring">
-      {icon}{link.label}{!isInternal && <ArrowUpRight className="size-3.5" />}
-    </a>
-  )
-}
-
-export function PlaqueModal({
-  plaque,
-  connected = false,
-  onClose,
-  onContribute,
-  onViewContributions,
-  onOpenAgenda,
-}: {
-  plaque: Plaque
-  connected?: boolean
-  onClose: () => void
-  onContribute: (universe: Universe, section?: string) => void
-  onViewContributions: (universe: Universe, section: string) => void
-  onOpenAgenda: () => void
-}) {
-  const closeRef = useRef<HTMLButtonElement>(null)
-  useEffect(() => {
-    closeRef.current?.focus()
-    const onKey = (event: KeyboardEvent) => { if (event.key === "Escape") onClose() }
-    document.addEventListener("keydown", onKey)
-    document.body.style.overflow = "hidden"
-    return () => {
-      document.removeEventListener("keydown", onKey)
-      document.body.style.overflow = ""
-    }
-  }, [onClose])
-
-  const Icon = universeIcon[plaque.universe]
-  const { content } = plaque
-  const mediaCollections: Record<string, string> = { "Lettres à mes filles": "lettres-filles", "Lettres à mes gendres": "lettres-gendres", "Les podcasts": "podcasts" }
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-foreground/55 p-0 backdrop-blur-sm sm:items-center sm:p-4" onClick={onClose} role="presentation">
-      <div role="dialog" aria-modal="true" aria-labelledby="plaque-title" onClick={(event) => event.stopPropagation()} className="max-h-[92vh] w-full max-w-2xl overflow-y-auto rounded-t-3xl border border-border bg-card text-card-foreground shadow-2xl sm:rounded-3xl">
-        <div className="sticky top-0 z-10 flex items-start justify-between gap-4 border-b border-border bg-card/95 px-5 py-5 backdrop-blur sm:px-7">
-          <div className="flex items-center gap-3">
-            <span aria-hidden="true" className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-primary text-primary-foreground"><Icon className="size-5" /></span>
-            <div><p className="text-xs font-semibold uppercase tracking-[0.17em] text-primary">{plaque.tagline}</p><h2 id="plaque-title" className="mt-1 font-serif text-2xl font-semibold leading-tight text-pretty sm:text-3xl">{plaque.name}</h2></div>
-          </div>
-          <button ref={closeRef} onClick={onClose} aria-label="Fermer" className="rounded-full p-2 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"><X className="size-5" /></button>
-        </div>
-
-        <div className="flex flex-col gap-6 px-5 py-6 sm:px-7 sm:py-7">
-          {content.intro?.map((paragraph, index) => <p key={index} className="leading-relaxed text-muted-foreground">{paragraph}</p>)}
-
-          {content.highlights && <div className={`grid grid-cols-1 gap-3 ${plaque.universe === "transmission" ? "" : "sm:grid-cols-2"}`}>{content.highlights.map((highlight) => <div key={highlight.label} className="rounded-2xl border border-border bg-secondary/50 p-4"><div className="font-semibold">{highlight.label}</div><p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">{highlight.description}</p>{plaque.universe === "transmission" && mediaCollections[highlight.label] && <MediaShelf collection={mediaCollections[highlight.label]} connected={connected} onConnect={() => onContribute(plaque.universe, highlight.label)} />}<div className="mt-4 flex flex-wrap gap-2"><button type="button" onClick={() => onViewContributions(plaque.universe, highlight.label)} className="inline-flex items-center gap-1.5 rounded-full border border-border bg-background px-3 py-2 text-xs font-semibold transition hover:bg-secondary"><Eye className="size-3.5" /> Voir les contributions</button><button type="button" onClick={() => onContribute(plaque.universe, highlight.label)} className="inline-flex items-center gap-1.5 rounded-full bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground transition hover:opacity-90"><PlusCircle className="size-3.5" /> Ajouter</button></div></div>)}</div>}
-
-          <details className="rounded-2xl border border-border p-4"><summary className="cursor-pointer font-semibold">{plaque.universe === "transmission" ? "Autres livres et ressources" : "La médiathèque"}</summary><MediaShelf collection={plaque.universe} connected={connected} onConnect={() => onContribute(plaque.universe)} /></details>
-
-          {content.albums?.map((album) => <div key={album.title} className="flex flex-col gap-4 rounded-2xl border border-border bg-secondary/40 p-4 sm:flex-row sm:p-5">
-            <div className="relative aspect-square w-full shrink-0 overflow-hidden rounded-xl bg-muted sm:w-36"><Image src={album.cover || "/placeholder.svg"} alt={`Pochette de ${album.title}`} fill sizes="144px" className="object-cover" /></div>
-            <div className="flex min-w-0 flex-col justify-center gap-3"><div><p className="font-serif text-xl font-semibold leading-tight">{album.title}</p>{album.subtitle && <p className="mt-1 text-sm text-muted-foreground">{album.subtitle}</p>}</div>{album.audio && <audio controls preload="none" className="w-full"><source src={album.audio} />Votre navigateur ne supporte pas la lecture audio.</audio>}<div className="flex flex-wrap gap-2">{album.links.map((link) => <LinkButton key={link.label} link={link} onMissing={() => onContribute(plaque.universe, `${album.title} — ${link.label}`)} />)}</div><div className="flex flex-wrap gap-2 border-t border-border/70 pt-3"><button type="button" onClick={() => onViewContributions(plaque.universe, album.title)} className="inline-flex items-center gap-1.5 rounded-full border border-border bg-background px-3 py-2 text-xs font-semibold hover:bg-secondary"><Eye className="size-3.5" /> Voir les contributions sur cet album</button><button type="button" onClick={() => onContribute(plaque.universe, album.title)} className="inline-flex items-center gap-1.5 rounded-full bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground hover:opacity-90"><PlusCircle className="size-3.5" /> Ajouter une contribution</button></div></div>
-          </div>)}
-
-          {content.news && <ol className="flex flex-col gap-3">{content.news.map((news, index) => <li key={`${news.title}-${index}`} className="rounded-2xl border border-border bg-secondary/40 p-4"><p className="text-xs font-semibold uppercase tracking-wide text-primary">{news.date}</p><p className="mt-1 font-semibold">{news.title}</p><p className="mt-1 text-sm leading-relaxed text-muted-foreground">{news.body}</p>{news.pdf && <div className="mt-3"><LinkButton link={{ label: "Lire le livret (PDF)", url: news.pdf, kind: "pdf" }} onMissing={() => onContribute(plaque.universe, news.title)} /></div>}</li>)}</ol>}
-
-          {content.books?.map((book) => <div key={book.title} className="flex flex-col gap-4 rounded-2xl border border-border bg-secondary/40 p-4 sm:flex-row"><div className="relative aspect-[3/4] w-full shrink-0 overflow-hidden rounded-xl bg-muted sm:w-24">{book.cover ? <Image src={book.cover} alt={`Couverture de ${book.title}`} fill sizes="96px" className="object-cover" /> : <div className="flex h-full items-center justify-center"><BookOpen className="size-9 text-muted-foreground" /></div>}</div><div className="flex flex-col justify-center gap-3"><p className="font-serif text-lg font-semibold">{book.title}</p><p className="text-sm leading-relaxed text-muted-foreground">{book.description}</p>{book.pdf ? <LinkButton link={{ label: "Lire le livre (PDF)", url: book.pdf, kind: "pdf" }} onMissing={() => onContribute(plaque.universe, book.title)} /> : <button type="button" onClick={() => onContribute(plaque.universe, book.title)} className="inline-flex items-center gap-2 self-start rounded-full border border-dashed border-primary/40 bg-primary/5 px-4 py-2 text-sm font-medium text-primary hover:bg-primary/10"><PlusCircle className="size-4" /> Proposer le lien du livre</button>}<div className="flex flex-wrap gap-2 border-t border-border/70 pt-3"><button type="button" onClick={() => onViewContributions(plaque.universe, book.title)} className="inline-flex items-center gap-1.5 rounded-full border border-border px-3 py-2 text-xs font-semibold hover:bg-secondary"><Eye className="size-3.5" /> Voir les contributions</button><button type="button" onClick={() => onContribute(plaque.universe, book.title)} className="inline-flex items-center gap-1.5 rounded-full bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground hover:opacity-90"><PlusCircle className="size-3.5" /> Ajouter</button></div></div></div>)}
-
-          {content.video && <div className="flex flex-col gap-3"><div className="relative aspect-video w-full overflow-hidden rounded-2xl border border-border bg-secondary/60">{content.video.embedUrl ? <iframe src={content.video.embedUrl} title={content.video.title} allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen className="absolute inset-0 size-full" /> : <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 px-5 text-center text-muted-foreground"><PlayCircle className="size-10" /><p className="font-medium">{content.video.title}</p><p className="max-w-sm text-sm">{content.video.description || "La vidéo n'est pas intégrée au site ; ouvre son hébergement avec le bouton ci-dessous."}</p>{(() => { const driveVideo = content.links?.find((link) => /film/i.test(link.label) && link.url); return driveVideo?.url ? <a href={driveVideo.url} target="_blank" rel="noopener noreferrer" className="mt-2 inline-flex items-center gap-2 rounded-full border border-primary/30 bg-background px-4 py-2 text-sm font-semibold text-primary hover:bg-primary/5"><ExternalLink className="size-4" /> Ouvrir le dossier du film</a> : <button type="button" onClick={() => onContribute(plaque.universe, content.video?.title || "Vidéo")} className="mt-2 inline-flex items-center gap-2 rounded-full border border-primary/30 bg-background px-4 py-2 text-sm font-semibold text-primary hover:bg-primary/5"><PlusCircle className="size-4" /> Proposer le lien de la vidéo</button> })()}</div>}</div></div>}
-
-          {plaque.universe === "origines" && siteMeta.driveFolderUrl && <a href={siteMeta.driveFolderUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 self-start rounded-full border border-border bg-background px-4 py-2.5 text-sm font-semibold transition hover:bg-secondary"><ExternalLink className="size-4" /> Ouvrir toutes les archives Beer Road sur Google Drive</a>}
-
-          {content.links && content.links.some((link) => link.displayInResources !== false) && <section aria-label="Raccourcis et ressources" className="rounded-2xl border border-border p-4 sm:p-5"><h3 className="font-serif text-xl font-semibold">Raccourcis et ressources</h3><p className="mt-1 mb-4 text-sm leading-relaxed text-muted-foreground">Ces boutons ouvrent les ressources déjà reliées à cet univers. Si un lien manque, « Proposer un lien » ajoute une proposition au carnet de la tribu ; cela ne modifie pas automatiquement les raccourcis permanents de cette fiche.</p><div className="space-y-3">{content.links.filter((link) => link.displayInResources !== false).map((link) => <div key={link.label} className="flex flex-col gap-2 rounded-xl bg-secondary/35 p-3 sm:flex-row sm:items-center sm:justify-between"><div className="flex flex-wrap gap-2">{link.url ? <LinkButton link={link} onMissing={() => onContribute(plaque.universe, link.label)} /> : <span className="inline-flex items-center rounded-full border border-dashed border-border px-4 py-2 text-sm text-muted-foreground">Ressource à relier : {link.label}</span>}</div><div className="flex flex-wrap gap-2"><button type="button" onClick={() => onViewContributions(plaque.universe, link.label)} className="inline-flex items-center gap-1.5 rounded-full border border-border bg-background px-3 py-2 text-xs font-semibold hover:bg-secondary"><Eye className="size-3.5" /> Voir les contributions</button><button type="button" onClick={() => onContribute(plaque.universe, link.label)} className="inline-flex items-center gap-1.5 rounded-full border border-primary/25 bg-primary/5 px-3 py-2 text-xs font-semibold text-primary hover:bg-primary/10"><PlusCircle className="size-3.5" />{link.url ? "Ajouter une contribution" : "Proposer un lien ou une contribution"}</button></div></div>)}</div></section>}
-
-          <div className="rounded-2xl border border-primary/20 bg-primary/5 p-5 sm:p-6"><p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">À plusieurs, c'est mieux</p><h3 className="mt-1 font-serif text-xl font-semibold">Tu as quelque chose à ajouter à cet univers ?</h3><p className="mt-1 text-sm leading-relaxed text-muted-foreground">Une anecdote, un fichier audio, une photo, une vidéo ou une idée : chaque membre de la famille peut enrichir le patrimoine commun.</p><div className="mt-4 flex flex-wrap gap-2"><button type="button" onClick={() => onViewContributions(plaque.universe, "all")} className="inline-flex items-center gap-2 rounded-full border border-border bg-background px-4 py-2.5 text-sm font-semibold transition hover:bg-secondary"><Eye className="size-4" /> Voir toutes les contributions de cet univers</button><button type="button" onClick={() => onContribute(plaque.universe)} className="inline-flex items-center gap-2 rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground transition hover:opacity-90"><Newspaper className="size-4" /> Ajouter au « {plaque.name} »</button>{plaque.universe === "avenir" && <button type="button" onClick={onOpenAgenda} className="inline-flex items-center gap-2 rounded-full border border-border bg-background px-5 py-2.5 text-sm font-semibold transition hover:bg-secondary"><CalendarDays className="size-4" /> Ouvrir l’agenda familial</button>}</div></div>
-        </div>
-      </div>
+  document.addEventListener('keydown',key)
+  return()=>{document.removeEventListener('keydown',key);document.body.style.overflow=overflow;if(previous?.isConnected)previous.focus()}
+ },[])
+ const universe=plaque.universe,Icon=icons[universe]
+ const connect=()=>onContribute(universe)
+ const shelf=(collection:string)=><MediaShelf collection={collection} connected={connected} onConnect={connect}/>
+ const preview=(label:string)=><SectionPreview universe={universe} section={label} connected={connected} onMore={()=>onViewContributions(universe,label)}/>
+ return <div className="fixed inset-0 z-50 flex items-end justify-center bg-foreground/55 backdrop-blur-sm sm:items-center sm:p-4" onClick={onClose} role="presentation">
+  <div ref={dialog} role="dialog" aria-modal="true" aria-labelledby="plaque-title" onClick={e=>e.stopPropagation()} className="max-h-[92dvh] w-full max-w-2xl overflow-y-auto rounded-t-3xl border border-border bg-card shadow-2xl sm:rounded-3xl">
+   <header className="sticky top-0 z-10 flex items-center justify-between gap-3 border-b bg-card/95 px-5 py-4 backdrop-blur">
+    <div className="flex items-center gap-3"><Icon aria-hidden="true" className="size-6 shrink-0 text-primary"/><h2 id="plaque-title" className="font-serif text-2xl font-semibold">{plaque.name}</h2></div>
+    <button ref={close} type="button" onClick={onClose} aria-label="Fermer" className="rounded-full p-2 hover:bg-secondary"><X className="size-5"/></button>
+   </header>
+   <div className="space-y-5 p-5 sm:p-6">
+    {plaque.content.intro?.[0]&&<p className="text-sm text-muted-foreground">{plaque.content.intro[0]}</p>}
+    <div data-section="contents" className="space-y-4">
+     {universe==='origines'&&<><section aria-label="La médiathèque"><h3 className="font-serif text-xl font-semibold">La médiathèque</h3>{shelf('origines')}</section><section className="rounded-2xl border p-4"><h3 className="font-semibold">Beer Road — livret et paroles</h3><div className="mt-3 flex flex-wrap gap-2">{plaque.content.albums?.flatMap(a=>a.links).filter(l=>l.url).map(l=><a key={l.label} href={l.url} target="_blank" rel="noopener noreferrer" className={button}>{l.label}</a>)}</div></section></>}
+     {universe==='transmission'&&([['lettres-filles','Lettres à mes filles'],['lettres-gendres','Lettres à mes gendres'],['podcasts','Les podcasts']] as const).map(([key,title])=><section key={key} className="rounded-2xl border p-4"><h3 className="font-serif text-xl font-semibold">{title}</h3>{shelf(key)}</section>)}
+     {universe==='atelier'&&<><AppCatalog connected={connected}/><MediaShelf collection="atelier" connected={connected} onConnect={connect} hideWhenEmpty/></>}
+     {universe==='grenier'&&<><div className="flex flex-wrap gap-2">{plaque.content.links?.map(l=><a key={l.label} href={l.url} target="_blank" rel="noopener noreferrer" className={button}>{l.label}</a>)}</div><MediaShelf collection="grenier" connected={connected} onConnect={connect} hideWhenEmpty/></>}
+     {universe==='kerhuon'&&<section><h3 className="font-serif text-xl font-semibold">Guides de la maison</h3>{shelf('kerhuon')}</section>}
+     {universe==='legendes'&&<><section className="rounded-2xl border p-4"><h3 className="font-serif text-xl font-semibold">Films et podcasts qu’on aime</h3><div className="mt-3 flex gap-2" role="group" aria-label="Type de recommandation">{['Films qu’on aime','Podcasts qu’on aime'].map((value,i)=><button key={value} type="button" aria-pressed={recommendation===value} onClick={()=>setRecommendation(value)} className={`${button} ${recommendation===value?'bg-secondary':''}`}>{i===0?'Films':'Podcasts'}</button>)}</div>{preview(recommendation)}</section><section className="rounded-2xl border p-4"><h3 className="font-serif text-xl font-semibold">La boîte à anecdotes</h3><MediaShelf collection="legendes" connected={connected} onConnect={connect} hideWhenEmpty/>{preview('La boîte à anecdotes')}</section></>}
+     {universe==='avenir'&&<><button type="button" onClick={onOpenAgenda} className={`${button} gap-2`}><CalendarDays className="size-4"/>Ouvrir l’agenda familial</button><section className="rounded-2xl border p-4"><h3 className="font-serif text-xl font-semibold">Projets communs</h3><MediaShelf collection="avenir" connected={connected} onConnect={connect} hideWhenEmpty/>{preview('Projets communs')}</section></>}
     </div>
-  )
+    <section data-section="contributions" className="rounded-2xl border border-primary/20 bg-primary/5 p-4">
+     <h3 className="font-serif text-xl font-semibold">À plusieurs, c’est mieux</h3>
+     <p className="mt-1 text-sm text-muted-foreground">Partage une idée, un commentaire ou un souvenir.</p>
+     <label className="mt-3 block text-sm" htmlFor="contribution-section">À propos de</label>
+     <select id="contribution-section" value={section} onChange={e=>setSection(e.target.value)} className="mt-1 w-full rounded-xl border bg-background p-2 text-sm">{sectionsForUniverse(universe).map(s=><option key={s}>{s}</option>)}</select>
+     <div className="mt-3 flex flex-wrap gap-2"><button type="button" onClick={()=>onContribute(universe,section)} className="rounded-full bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground">Ajouter une contribution</button><button type="button" onClick={()=>onViewContributions(universe,section==='Contributions générales'?'all':section)} className={button}>Voir les contributions</button></div>
+    </section>
+   </div>
+  </div>
+ </div>
 }

@@ -35,7 +35,7 @@ function MediaItem({media}:{media:MediaResource}) {
   </div>}
  </article>
 }
-export function MediaShelf({collection,connected,onConnect}:{collection:string;connected:boolean;onConnect:()=>void}) {
+export function MediaShelf({collection,connected,onConnect,hideWhenEmpty=false}:{collection:string;connected:boolean;onConnect:()=>void;hideWhenEmpty?:boolean}) {
  const [rows,setRows]=useState<MediaResource[]>([]),[error,setError]=useState(''),[loading,setLoading]=useState(true),[attempt,setAttempt]=useState(0)
  useEffect(()=>{
   if(!connected)return
@@ -43,9 +43,11 @@ export function MediaShelf({collection,connected,onConnect}:{collection:string;c
   void listMedia(collection).then(data=>{if(active)setRows(data)}).catch(()=>{if(active)setError('Les ressources ne sont pas accessibles pour le moment.')}).finally(()=>{if(active)setLoading(false)})
   return ()=>{active=false}
  },[collection,connected,attempt])
+ if(!connected && hideWhenEmpty)return null
  if(!connected)return <button type="button" onClick={onConnect} className="mt-3 rounded-full bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground">Se connecter pour accéder aux contenus</button>
  if(loading)return <p role="status" className="mt-3 text-sm">Chargement des ressources…</p>
  if(error)return <p role="alert" className="mt-3 text-sm">{error} <button onClick={()=>setAttempt(x=>x+1)} className="underline">Réessayer</button></p>
+ if(!rows.length && hideWhenEmpty)return null
  return <div className="mt-3 space-y-3">
   {collection==='podcasts'&&<p className="text-sm text-muted-foreground">{rows.length} épisode{rows.length>1?'s':''} disponible{rows.length>1?'s':''} sur 12</p>}
   {!rows.length?<p className="text-sm text-muted-foreground">{collection==='podcasts'?'Les épisodes seront disponibles dès leur ajout.':'Le contenu sera disponible dès son ajout.'}</p>:rows.map(row=><MediaItem key={row.id} media={row}/>)}

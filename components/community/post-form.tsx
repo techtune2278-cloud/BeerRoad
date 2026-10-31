@@ -6,6 +6,7 @@ import { Send, Upload, X } from "lucide-react"
 import type { FormEvent } from "react"
 
 import {
+  isRecommendation,
   allowedFileTypes,
   audioTypes,
   fileKind,
@@ -66,6 +67,7 @@ export function PostForm({
   setError,
   setNotice,
 }: Props) {
+  const recommendation=isRecommendation(postUniverse,postSection)
   return (
     <form
       id="community-post-form"
@@ -130,7 +132,7 @@ export function PostForm({
         value={postSection}
         onChange={(event) => {
           setPostSection(event.target.value)
-          setPostTitle(event.target.value === "Contributions générales" ? "" : event.target.value)
+          setPostTitle("")
         }}
         className="mt-1.5 w-full rounded-xl border border-border bg-card px-3 py-2.5 text-sm outline-none focus:border-primary"
       >
@@ -144,7 +146,7 @@ export function PostForm({
         Une publication est classée à la fois dans un univers et dans cette rubrique.
       </p>
       <label htmlFor="post-title" className="mt-4 block text-sm font-medium">
-        Titre
+        {recommendation ? "Titre du film ou du podcast" : "Titre"}
       </label>
       <input
         id="post-title"
@@ -152,18 +154,19 @@ export function PostForm({
         maxLength={140}
         value={postTitle}
         onChange={(event) => setPostTitle(event.target.value)}
-        placeholder="Le fameux incident du barbecue…"
+        placeholder={recommendation ? "Le titre à découvrir…" : "Le fameux incident du barbecue…"}
         className="mt-1.5 w-full rounded-xl border border-border bg-card px-3 py-2.5 text-sm outline-none focus:border-primary"
       />
       <label htmlFor="post-body" className="mt-4 block text-sm font-medium">
-        Raconte ou ajoute un commentaire
+        {recommendation ? "Pourquoi le recommandes-tu ?" : "Raconte ou ajoute un commentaire"}
       </label>
       <textarea
         id="post-body"
+        required={recommendation}
         rows={4}
         value={postBody}
         onChange={(event) => setPostBody(event.target.value)}
-        placeholder="Le contexte, la date, les personnes présentes, pourquoi c'est culte…"
+        placeholder={recommendation ? "Quelques mots pour donner envie…" : "Le contexte, les personnes présentes…"}
         className="mt-1.5 w-full resize-y rounded-xl border border-border bg-card px-3 py-2.5 text-sm outline-none focus:border-primary"
       />
       {editingPostId && editingPost?.media_path && (

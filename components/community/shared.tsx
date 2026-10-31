@@ -30,16 +30,16 @@ export function universeName(universe: Universe) {
 }
 
 export function sectionsForUniverse(universe: Universe) {
-  const plaque = plaques.find((item) => item.universe === universe)
-  if (!plaque) return ["Contributions générales"]
-  const labels = [
-    "Contributions générales",
-    ...(plaque.content.highlights || []).map((item) => item.label),
-    ...(plaque.content.albums || []).map((item) => item.title),
-    ...(plaque.content.books || []).map((item) => item.title),
-    ...(plaque.content.links || []).map((item) => item.label),
-  ]
-  return Array.from(new Set(labels))
+  const sections: Record<Universe,string[]> = {
+    origines: ["Le film", "La Beer Road", "Livret et paroles"],
+    transmission: ["Lettres à mes filles", "Lettres à mes gendres", "Les podcasts"],
+    atelier: ["CookiWiki", "Frosti", "Cellio", "Mealio"],
+    grenier: ["Les chansons", "Les paroles"],
+    kerhuon: ["Arrivée et départ", "Équipements et dépannage", "Astuces maison"],
+    legendes: ["Films qu’on aime", "Podcasts qu’on aime", "La boîte à anecdotes"],
+    avenir: ["Projets communs", "Agenda familial"],
+  }
+  return ["Contributions générales", ...sections[universe]]
 }
 
 export function fileKind(file: File) {
@@ -71,3 +71,5 @@ export type ContributionRequest = {
   target: "carnet" | "agenda" | "feed"
   nonce: number
 }
+
+export const isRecommendation = (universe:Universe,section:string) => universe === "legendes" && ["Films qu’on aime", "Podcasts qu’on aime"].includes(section)

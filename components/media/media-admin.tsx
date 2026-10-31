@@ -1,4 +1,5 @@
 "use client"
+import { AppLinksAdmin } from "./app-catalog"
 import { useEffect, useState, type FormEvent } from 'react'
 import { collections, deleteMedia, isMediaAdmin, listMedia, saveMedia, uploadOfficial, removeMediaFile, driveLinks, validateMediaFile, type MediaInput, type MediaResource } from '@/lib/media-library'
 const empty:MediaInput={collection:'lettres-filles',title:'',description:'',kind:'pdf',position:1,published:true,storage_path:null,drive_url:null,file_name:null,size_bytes:null}
@@ -64,6 +65,7 @@ export function MediaAdmin() {
    </form>
    {error&&<p role="alert" className="mt-3 text-sm text-destructive">{error}</p>}
    {message&&<p role="status" className="mt-3 text-sm">{message}</p>}
+   <AppLinksAdmin/>
    <h4 className="mt-6 font-semibold">Ressources enregistrées ({rows.length})</h4>
    <ul className="mt-2 space-y-2">{rows.map(row=><li key={row.id} className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-secondary/50 p-3"><div className="min-w-0"><p className="break-words text-sm font-semibold">{row.title}{!row.published?' · Masqué':''}</p><p className="text-xs text-muted-foreground">{collections.find(([key])=>key===row.collection)?.[1]} · n° {row.position}</p></div><div className="flex gap-3"><button disabled={busy} type="button" onClick={()=>edit(row)} className="text-sm underline">Modifier</button><button disabled={busy} type="button" onClick={()=>void remove(row)} className="text-sm underline">Supprimer</button></div></li>)}</ul>
   </div>}
