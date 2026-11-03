@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react'
 import { PdfReader } from './pdf-reader'
 import { listMedia, mediaUrl, driveLinks, type MediaResource } from '@/lib/media-library'
 const action = {audio:'Écouter',video:'Regarder',pdf:'Lire',image:'Voir'}
-function MediaItem({media}:{media:MediaResource}) {
+export function MediaItem({media}:{media:MediaResource}) {
  const [url,setUrl]=useState(''), [busy,setBusy]=useState(false), [error,setError]=useState('')
  const [download,setDownload]=useState('')
  async function open(asDownload=false) {

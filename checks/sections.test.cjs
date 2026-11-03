@@ -17,8 +17,8 @@ test('origines : médiathèque ouverte avant livret et paroles, aucune répétit
 test('transmission : trois collections précises seulement',()=>{
  const s=html(plaques[1]);assert.equal((s.match(/data-collection=/g)||[]).length,3);assert.ok(!s.includes('Autres livres'))
 })
-test('grenier : trois liens utiles, pas de livret Beer Road',()=>{
- const s=html(plaques[3]);assert.ok(s.includes('https://www.legrenierdelwood.com/'));assert.ok(!s.includes('Livret_de_la_Beer_Road.pdf'));assert.equal(plaques[3].content.links.length,3)
+test('grenier : deux liens utiles, pas de livret Beer Road',()=>{
+ const s=html(plaques[3]);assert.ok(s.includes('https://www.legrenierdelwood.com/'));assert.ok(!s.includes('Livret_de_la_Beer_Road.pdf'));assert.equal(plaques[3].content.links.length,2)
 })
 test('recommandations distinguées, toutes les rubriques restent ouvertes aux contributions',()=>{
  assert.ok(isRecommendation('legendes','Films qu’on aime'));assert.ok(isRecommendation('legendes','Podcasts qu’on aime'));assert.ok(!isRecommendation('legendes','La boîte à anecdotes'))

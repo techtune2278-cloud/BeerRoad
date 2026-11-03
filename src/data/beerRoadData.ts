@@ -49,7 +49,7 @@ export const siteMeta = {
   "title": "La Beer Road",
   "emojiTitle": "👣",
   "heroImage": "/beer-road.jpeg",
-  "searchPlaceholder": "Chercher un univers, une idée, un mot…",
+  "searchPlaceholder": "Chercher un tuto, un podcast, une contribution…",
   "driveFolderUrl": "https://drive.google.com/drive/folders/1tn5NZkTjxGQHj_LJC9hVGPtB31Vh-4vq?usp=drive_link"
 }
 
@@ -159,11 +159,7 @@ export const plaques: Plaque[] = [
           "url": "https://linktr.ee/LeGrenierElwood",
           "kind": "music"
         },
-        {
-          "label": "Les paroles sur Drive",
-          "url": "https://drive.google.com/drive/folders/1xcqEB3VeeiV5huZlIpcoAWTsvY27cngD?usp=drive_link",
-          "kind": "external"
-        }
+
       ]
     }
   },

@@ -1,7 +1,9 @@
 "use client"
 
-import { useCallback, useMemo, useRef, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import Image from "next/image"
+import { ResourceSearch, SearchResultDialog } from "./resource-search"
+import { matchesSearch, plaqueSearchText, type ResourceResult } from "@/lib/resource-search"
 import { SITE_VERSION } from "@/lib/version"
 import {
   ArrowDown,
@@ -19,15 +21,6 @@ import { PlaqueModal } from "@/components/plaque-modal"
 import { PwaInstallButton } from "@/components/pwa-install-button"
 import { CommunityHub } from "@/components/community-hub"
 
-function searchText(plaque: Plaque) {
-  const parts = [plaque.name, plaque.tagline, plaque.universe]
-  if (plaque.content.intro) parts.push(...plaque.content.intro)
-  if (plaque.content.albums) parts.push(...plaque.content.albums.map((album) => `${album.title} ${album.subtitle || ""}`))
-  if (plaque.content.books) parts.push(...plaque.content.books.map((book) => `${book.title} ${book.description}`))
-  if (plaque.content.highlights) parts.push(...plaque.content.highlights.map((highlight) => `${highlight.label} ${highlight.description}`))
-  return parts.join(" ").toLocaleLowerCase("fr-FR")
-}
-
 type AuthStatus = { status: "checking" | "connected" | "disconnected"; label: string; email?: string }
 
 
@@ -38,13 +31,15 @@ export function BeerRoad() {
     setAuthStatus(nextStatus)
   }, [])
   const [active, setActive] = useState<Plaque | null>(null)
+  const [searchResult,setSearchResult]=useState<(ResourceResult & {viewer?:string})|null>(null)
+  useEffect(()=>{setSearchResult(null)},[authStatus.email,authStatus.status])
   const [query, setQuery] = useState("")
   const [isPlaying, setIsPlaying] = useState(false)
   const [communityRequest, setCommunityRequest] = useState<{ universe: Universe; section: string; target: "carnet" | "agenda" | "feed"; nonce: number }>({ universe: "legendes", section: "Contributions générales", target: "carnet", nonce: 0 })
   const audioRef = useRef<HTMLAudioElement | null>(null)
 
   const trimmedQuery = query.trim().toLocaleLowerCase("fr-FR")
-  const matches = useMemo(() => trimmedQuery ? plaques.filter((plaque) => searchText(plaque).includes(trimmedQuery)) : [], [trimmedQuery])
+  const matches = useMemo(() => trimmedQuery ? plaques.filter((plaque) => matchesSearch(plaqueSearchText(plaque),trimmedQuery)) : [], [trimmedQuery])
   const matchIds = useMemo(() => new Set(matches.map((plaque) => plaque.id)), [matches])
   const handleOpenPlaque = (plaque: Plaque) => {
     setActive(plaque)
@@ -107,13 +102,13 @@ export function BeerRoad() {
 
         <p className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.2em] text-primary"><Compass className="size-3.5" /> Le patrimoine commun de la tribu</p>
         <h1 className="font-serif text-4xl font-semibold tracking-tight sm:text-5xl lg:text-6xl">{siteMeta.title} <span aria-hidden="true">{siteMeta.emojiTitle}</span></h1>
-        <p className="max-w-2xl text-sm leading-relaxed text-muted-foreground sm:text-base">Une route bien réelle à Ker Huon, mais une aventure qui va beaucoup plus loin. Sept empreintes, sept univers pour partager nos créations, nos idées, nos codes et les projets qui nous rassemblent.</p>
+        <p className="max-w-2xl text-sm leading-relaxed text-muted-foreground sm:text-base">Une route bien réelle à Ker Huon, mais une aventure qui va beaucoup plus loin. Sept empreintes, sept univers pour partager nos créations, nos idées et les projets qui nous rassemblent.</p>
 
         <div className="relative mt-1 w-full max-w-xl">
-          <label htmlFor="beer-road-search" className="sr-only">Rechercher un univers</label>
+          <label htmlFor="beer-road-search" className="sr-only">Rechercher dans tous les contenus</label>
           <Search aria-hidden="true" className="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-          <input id="beer-road-search" type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder={siteMeta.searchPlaceholder} className="w-full rounded-full border border-border bg-card py-3 pl-11 pr-4 text-sm shadow-sm outline-none transition-colors placeholder:text-muted-foreground focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/15" />
-          {trimmedQuery && <div className="absolute left-0 right-0 top-full z-30 mt-2 overflow-hidden rounded-2xl border border-border bg-popover text-left shadow-xl">{matches.length === 0 ? <p className="px-4 py-3 text-sm text-muted-foreground">Aucun univers trouvé. Essaie un autre mot.</p> : <ul>{matches.map((match) => <li key={match.id}><button onClick={() => { handleOpenPlaque(match); setQuery("") }} className="flex w-full items-center gap-3 px-4 py-3 text-left text-sm transition-colors hover:bg-secondary"><span className="flex size-9 items-center justify-center rounded-xl bg-secondary text-lg">{match.emoji}</span><span><span className="block font-semibold">{match.name}</span><span className="mt-0.5 block text-xs text-muted-foreground">{match.tagline}</span></span></button></li>)}</ul>}</div>}
+          <input id="beer-road-search" type="search" maxLength={160} value={query} onChange={(event) => setQuery(event.target.value)} placeholder={siteMeta.searchPlaceholder} className="w-full rounded-full border border-border bg-card py-3 pl-11 pr-4 text-sm shadow-sm outline-none transition-colors placeholder:text-muted-foreground focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/15" />
+          {trimmedQuery && <ResourceSearch key={authStatus.email || authStatus.status} query={query} connected={authStatus.status === "connected"} matches={matches} onUniverse={p=>{handleOpenPlaque(p);setQuery("")}} onResult={result=>{setSearchResult({...result,viewer:authStatus.email});setQuery("")}}/>}
         </div>
       </header>
 
@@ -123,15 +118,17 @@ export function BeerRoad() {
           <div className="relative aspect-[3/4] w-full overflow-hidden rounded-[2rem] border border-border bg-muted shadow-xl">
             <Image src={siteMeta.heroImage} alt="Les empreintes du chemin de la Beer Road dans le jardin de Ker Huon" fill priority sizes="(max-width: 1024px) 100vw, 55vw" className="select-none object-cover" />
             <div aria-hidden="true" className="pointer-events-none absolute inset-0 bg-gradient-to-b from-foreground/5 via-transparent to-foreground/10" />
+            <svg aria-hidden="true" className="pointer-events-none absolute inset-0 h-full w-full" viewBox="0 0 100 100" preserveAspectRatio="none">{plaques.map((p,i)=><line key={p.id} x1={p.position.x+p.position.width/2} y1={p.position.y} x2="53" y2={84-i*12.5} stroke="white" strokeWidth="0.45"/>)}</svg>
             {plaques.map((plaque, index) => {
-              const dimmed = trimmedQuery.length > 0 && !matchIds.has(plaque.id)
+              const dimmed = false
               const highlighted = trimmedQuery.length > 0 && matchIds.has(plaque.id)
               return <button key={plaque.id} onClick={() => handleOpenPlaque(plaque)} aria-label={`${plaque.name} — ${plaque.tagline}`} className="group absolute rounded-xl outline-none transition-all duration-300 focus-visible:ring-2 focus-visible:ring-primary" style={{ left: `${plaque.position.x}%`, top: `${plaque.position.y}%`, width: `${plaque.position.width}%`, height: `${plaque.position.height}%`, transform: `translate(-50%, -50%) rotate(${plaque.position.rotate ?? 0}deg)`, opacity: dimmed ? 0.38 : 1 }}>
                 <span aria-hidden="true" className={`absolute inset-0 rounded-xl border-2 transition-all duration-300 ${highlighted ? "border-accent shadow-[0_0_0_4px_var(--color-accent)] opacity-100" : "border-accent opacity-0 shadow-[0_0_18px_2px_var(--color-accent)] group-hover:opacity-100 group-focus-visible:opacity-100"}`} />
-                <span className={`pointer-events-none absolute -right-1 -top-2 flex size-6 items-center justify-center rounded-full border border-background bg-card/90 text-foreground text-[10px] font-bold shadow-sm transition-opacity ${highlighted ? "bg-accent text-accent-foreground opacity-100" : "opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100"}`}>{index + 1}</span>
-                <span className={`pointer-events-none absolute left-1/2 top-0 z-10 -translate-x-1/2 -translate-y-[115%] whitespace-nowrap rounded-full bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground shadow-md transition-opacity ${highlighted ? "opacity-100" : "opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100"}`}>{plaque.emoji} {plaque.name}</span>
+                <span className={`pointer-events-none absolute -right-1 -top-2 flex size-6 items-center justify-center rounded-full border border-background bg-card/90 text-foreground text-[10px] font-bold shadow-sm transition-opacity ${highlighted ? "bg-accent text-accent-foreground opacity-100" : "opacity-100"}`}>{index + 1}</span>
+
               </button>
             })}
+            {plaques.map((p,i)=><button key={`label-${p.id}`} type="button" onClick={()=>handleOpenPlaque(p)} aria-label={`Ouvrir ${p.name}`} style={{left:'53%',top:`${84-i*12.5}%`,width:'44%',transform:'translateY(-50%)'}} className="absolute z-10 rounded-xl border border-white/60 bg-card/95 px-2 py-2 text-left text-[11px] font-semibold leading-tight text-foreground shadow-md sm:text-sm"><span className="mr-1 text-primary">{i+1}.</span>{p.name}</button>)}
           </div>
           <p className="mt-3 flex items-start gap-2 px-1 text-xs leading-relaxed text-muted-foreground"><ArrowDown className="mt-0.5 size-4 shrink-0 text-primary" /> Le chemin se trouve à Ker Huon ; les univers, eux, voyagent partout où la famille se retrouve.</p>
         </div>
@@ -160,6 +157,7 @@ export function BeerRoad() {
         <p className="text-xs leading-relaxed text-muted-foreground">La Beer Road · Ker Huon, Runan · Un chemin qui se prolonge de génération en génération.</p>
       </footer>
 
+      {searchResult && searchResult.viewer === authStatus.email && authStatus.status === "connected" && <SearchResultDialog result={searchResult} onClose={()=>setSearchResult(null)} onUniverse={universe=>{setSearchResult(null);setActive(plaques.find(p=>p.universe===universe)||null)}}/>}
       {active && <PlaqueModal key={`${active.id}-${authStatus.email || authStatus.status}`} connected={authStatus.status === "connected"} plaque={active} onClose={() => setActive(null)} onContribute={handleContribute} onViewContributions={handleViewContributions} onOpenAgenda={handleOpenAgenda} />}
     </main>
   )

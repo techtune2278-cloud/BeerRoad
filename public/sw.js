@@ -1,5 +1,5 @@
 /* La Beer Road PWA — cache public uniquement, jamais les données familiales privées. */
-const CACHE_VERSION = "beer-road-pwa-v1-5-0";
+const CACHE_VERSION = "beer-road-pwa-v1-5-1";
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const PAGE_CACHE = `${CACHE_VERSION}-pages`;
 const OFFLINE_URL = "/offline.html";

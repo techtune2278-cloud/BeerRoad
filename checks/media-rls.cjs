@@ -48,5 +48,35 @@ await db.exec("set test.email='outsider@test.fr';")
 assert.equal((await db.query('select * from public.application_links')).rows.length,0)
 console.log('PASS: liens applications, lecture membre, modification administrateur uniquement, migration répétable.')
 console.log('PASS: migration répétable, administrateur, membre, non-membre, masquage, fichiers privés, refus élévation des droits, doublons et épisode 13.')
+await db.exec(`reset role;
+create table public.community_posts(id uuid primary key default gen_random_uuid(),universe_slug text,section_label text,title text,body text);
+create table public.family_events(id uuid primary key default gen_random_uuid(),title text,details text,location text);
+alter table public.community_posts enable row level security;
+alter table public.family_events enable row level security;
+create policy posts_read on public.community_posts for select to authenticated using (public.is_family_member());
+create policy events_read on public.family_events for select to authenticated using (public.is_family_member());
+grant select on public.community_posts,public.family_events to authenticated;
+insert into public.community_posts(universe_slug,section_label,title,body) values ('kerhuon','Astuces maison','Vanne du jardin','Couper l’eau près du portail');
+insert into public.family_events(title,details,location) values ('Retrouvailles','Repas familial','Ker Huon');
+insert into public.media_resources(collection,title,description,kind,drive_url,position) values
+('kerhuon','Tuto technique','Couper l’eau de la maison','pdf','https://drive.google.com/file/d/a/view',1),
+('podcasts','Episode technique','Électricité et circuits','audio','https://drive.google.com/file/d/a/view',2);
+insert into public.media_resources(collection,title,description,kind,drive_url)
+select 'kerhuon','Tutoriel '||i,'serie paginée','pdf','https://drive.google.com/file/d/a/view' from generate_series(1,35) i;
+`)
+const searchSql=fs.readFileSync(require('node:path').join(__dirname,'../supabase/recherche-v1.5.1.sql'),'utf8');await db.exec(searchSql);await db.exec(searchSql)
+await db.exec("set role authenticated;set test.email='member@test.fr';")
+assert.equal((await db.query("select * from public.search_beer_resources('eau',0)")).rows.length,2)
+assert.equal((await db.query("select * from public.search_beer_resources('couper l''eau',0)")).rows.length,2)
+assert.equal((await db.query("select * from public.search_beer_resources('electricite',0)")).rows[0].section,'podcasts')
+assert.equal((await db.query("select * from public.search_beer_resources('maison technique',0)")).rows.length,1)
+assert.equal((await db.query("select * from public.search_beer_resources('repas',0)")).rows[0].kind,'event')
+assert.equal((await db.query("select * from public.search_beer_resources('%_',0)")).rows.length,0)
+assert.equal((await db.query("select * from public.search_beer_resources('serie',0)")).rows.length,31)
+assert.equal((await db.query("select * from public.search_beer_resources('serie',30)")).rows.length,5)
+assert.equal((await db.query("select * from public.search_beer_resources('Episode 1',0)")).rows.length,0)
+await db.exec("set test.email='outsider@test.fr';")
+assert.equal((await db.query("select * from public.search_beer_resources('eau',0)")).rows.length,0)
+console.log('PASS: recherche titres/descriptions/contributions/agenda, accents, mots combinés, pagination, médias masqués et confidentialité.')
 await db.close()
-})().catch(e=>{console.error(e);process.exitCode=1})
+})().catch(e=>{console.error(e);process.exit(1)})
