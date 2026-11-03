@@ -27,15 +27,15 @@ function worker() {
 
 test('offline: la dernière page visitée prime sur la page précachée', async () => {
   const { caches, request } = worker()
-  await (await caches.open('beer-road-pwa-v1-5-2-static')).put('/', new Response('ancienne'))
-  await (await caches.open('beer-road-pwa-v1-5-2-pages')).put('/', new Response('récente'))
+  await (await caches.open('beer-road-pwa-v1-5-4-static')).put('/', new Response('ancienne'))
+  await (await caches.open('beer-road-pwa-v1-5-4-pages')).put('/', new Response('récente'))
   assert.equal(await (await request()).text(), 'récente')
 })
 
 test('offline: repli sur la page précachée puis sur la page de secours', async () => {
   for (const key of ['/', '/offline.html']) {
     const { caches, request } = worker()
-    await (await caches.open('beer-road-pwa-v1-5-2-static')).put(key, new Response(key))
+    await (await caches.open('beer-road-pwa-v1-5-4-static')).put(key, new Response(key))
     assert.equal(await (await request()).text(), key)
   }
 })

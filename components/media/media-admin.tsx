@@ -1,18 +1,25 @@
 "use client"
 import { AppLinksAdmin } from "./app-catalog"
-import { useEffect, useState, type FormEvent } from 'react'
-import { collections, deleteMedia, isMediaAdmin, listMedia, saveMedia, uploadOfficial, removeMediaFile, driveLinks, validateMediaFile, type MediaInput, type MediaResource } from '@/lib/media-library'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
+import { mediaKinds, sortAdminMedia, collections, deleteMedia, isMediaAdmin, listMedia, saveMedia, uploadOfficial, removeMediaFile, driveLinks, validateMediaFile, type MediaInput, type MediaResource } from '@/lib/media-library'
 const empty:MediaInput={collection:'lettres-filles',title:'',description:'',kind:'pdf',position:1,published:true,storage_path:null,drive_url:null,file_name:null,size_bytes:null}
 const inputClass='mt-1 w-full rounded-xl border border-border bg-background p-3 text-sm'
 export function MediaAdmin() {
+ const editorHeading=useRef<HTMLHeadingElement>(null)
+ const [editRequest,setEditRequest]=useState(0)
+ useEffect(()=>{
+  if(!editRequest)return
+  editorHeading.current?.focus({preventScroll:true})
+  editorHeading.current?.scrollIntoView({behavior:'auto',block:'start'})
+ },[editRequest])
  const [admin,setAdmin]=useState(false),[open,setOpen]=useState(false),[rows,setRows]=useState<MediaResource[]>([])
  const [form,setForm]=useState<MediaInput>(empty),[id,setId]=useState<string>(),[file,setFile]=useState<File|null>(null)
  const [source,setSource]=useState<'file'|'drive'>('file'),[drive,setDrive]=useState(''),[fileKey,setFileKey]=useState(0)
  const [busy,setBusy]=useState(false),[progress,setProgress]=useState(0),[message,setMessage]=useState(''),[error,setError]=useState('')
  useEffect(()=>{let active=true;void isMediaAdmin().then(value=>{if(active)setAdmin(value === true)}).catch(()=>{});return()=>{active=false}},[])
- async function refresh(){setRows(await listMedia(undefined,true))}
+ async function refresh(){setRows(sortAdminMedia(await listMedia(undefined,true)))}
  function reset(){setForm({...empty});setId(undefined);setFile(null);setDrive('');setSource('file');setFileKey(x=>x+1)}
- function edit(row:MediaResource){setForm({...row});setId(row.id);setFile(null);setFileKey(x=>x+1);setSource(row.drive_url?'drive':'file');setDrive(row.drive_url||'');setError('');setMessage('')}
+ function edit(row:MediaResource){setEditRequest(value=>value+1);setForm({...row});setId(row.id);setFile(null);setFileKey(x=>x+1);setSource(row.drive_url?'drive':'file');setDrive(row.drive_url||'');setError('');setMessage('')}
  async function submit(e:FormEvent){
   e.preventDefault();setBusy(true);setError('');setMessage('');setProgress(0)
   try{
@@ -46,7 +53,7 @@ export function MediaAdmin() {
  return <div className="mt-4 rounded-2xl border border-border p-3 sm:p-4">
   <button type="button" disabled={busy} aria-expanded={open} onClick={async()=>{setOpen(!open);if(!open){setError('');try{await refresh()}catch{setError('Impossible de charger la médiathèque. Vérifie que la migration SQL a été appliquée.')}}}} className="text-sm font-semibold underline">{open?'Fermer la gestion des médias':'Gérer les médias'}</button>
   {open&&<div className="mt-4">
-   <h3 className="font-serif text-xl">{id?'Modifier une ressource':'Ajouter une ressource'}</h3>
+   <h3 ref={editorHeading} tabIndex={-1} className="scroll-mt-6 font-serif text-xl focus:outline-none">{id?`Modifier : ${form.title}`:'Ajouter une ressource'}</h3>
    <form onSubmit={submit} className="mt-3 space-y-3">
     <fieldset disabled={busy} className="space-y-3 disabled:opacity-60">
      <label className="block text-sm">Emplacement<select className={inputClass} value={form.collection} onChange={e=>{const collection=e.target.value;setForm({...form,collection,kind:collection==='podcasts'?'audio':['lettres-filles','lettres-gendres'].includes(collection)?'pdf':form.kind});setFile(null);setFileKey(x=>x+1)}}>{collections.map(([key,label])=><option key={key} value={key}>{label}</option>)}</select></label>
@@ -54,8 +61,9 @@ export function MediaAdmin() {
      <label className="block text-sm">Description (facultative)<textarea maxLength={2000} className={inputClass} value={form.description} onChange={e=>setForm({...form,description:e.target.value})}/></label>
      <div className="grid gap-3 sm:grid-cols-2">
       <label className="block text-sm">Type<select disabled={['lettres-filles','lettres-gendres','podcasts'].includes(form.collection)||!!form.storage_path} className={inputClass} value={form.kind} onChange={e=>{setForm({...form,kind:e.target.value as MediaResource['kind']});setFile(null);setFileKey(x=>x+1)}}><option value="audio">Audio MP3</option><option value="pdf">Livre PDF</option><option value="video">Film MP4</option><option value="image">Image</option></select></label>
-      <label className="block text-sm">{form.collection==='podcasts'?'Numéro de l’épisode (1 à 12)':'Ordre d’affichage'}<input type="number" required min={1} max={form.collection==='podcasts'?12:999} className={inputClass} value={form.position} onChange={e=>setForm({...form,position:Number(e.target.value)})}/></label>
+      <label className="block text-sm">{form.collection==='podcasts'?'Numéro de l’épisode (1 à 12)':'Ordre dans ce type de média'}<input type="number" required min={1} max={form.collection==='podcasts'?12:999} className={inputClass} value={form.position} onChange={e=>setForm({...form,position:Number(e.target.value)})}/></label>
      </div>
+     <p className="text-xs text-muted-foreground">Dans chaque emplacement : audios, films, PDF, puis images. Chaque type suit ses propres numéros. Pour changer seulement l’ordre, conserve le fichier actuel.</p>
      <label className="block text-sm">Source<select className={inputClass} value={source} onChange={e=>setSource(e.target.value as 'file'|'drive')}><option value="file">Charger un fichier dans l’application</option><option value="drive">Relier un fichier Google Drive</option></select></label>
      {source==='file'?<label className="block text-sm">Fichier — 50 Mo maximum<input key={fileKey} type="file" accept={{audio:'.mp3',video:'.mp4',pdf:'.pdf',image:'.jpg,.jpeg,.png,.webp'}[form.kind]} className={inputClass} onChange={e=>setFile(e.target.files?.[0]||null)}/>{form.file_name&&<span className="text-xs">Fichier actuel : {form.file_name}. Laisse ce champ vide pour le conserver.</span>}</label>:<label className="block text-sm">Lien de partage du fichier Drive<input type="url" required className={inputClass} value={drive} onChange={e=>setDrive(e.target.value)} placeholder="https://drive.google.com/file/d/…/view"/><span className="text-xs text-muted-foreground">Choisis le fichier, pas le dossier. Vérifie les droits de lecture et de téléchargement pour ta famille.</span></label>}
      <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={form.published} onChange={e=>setForm({...form,published:e.target.checked})}/>Visible pour la famille</label>
@@ -67,7 +75,7 @@ export function MediaAdmin() {
    {message&&<p role="status" className="mt-3 text-sm">{message}</p>}
    <AppLinksAdmin/>
    <h4 className="mt-6 font-semibold">Ressources enregistrées ({rows.length})</h4>
-   <ul className="mt-2 space-y-2">{rows.map(row=><li key={row.id} className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-secondary/50 p-3"><div className="min-w-0"><p className="break-words text-sm font-semibold">{row.title}{!row.published?' · Masqué':''}</p><p className="text-xs text-muted-foreground">{collections.find(([key])=>key===row.collection)?.[1]} · n° {row.position}</p></div><div className="flex gap-3"><button disabled={busy} type="button" onClick={()=>edit(row)} className="text-sm underline">Modifier</button><button disabled={busy} type="button" onClick={()=>void remove(row)} className="text-sm underline">Supprimer</button></div></li>)}</ul>
+   <ul className="mt-2 space-y-2">{rows.map(row=><li key={row.id} className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-secondary/50 p-3"><div className="min-w-0"><p className="break-words text-sm font-semibold">{row.title}{!row.published?' · Masqué':''}</p><p className="text-xs text-muted-foreground">{collections.find(([key])=>key===row.collection)?.[1]} · {mediaKinds.find(([kind])=>kind===row.kind)?.[1]} · n° {row.position}</p></div><div className="flex gap-3"><button disabled={busy} type="button" onClick={()=>edit(row)} className="min-h-11 rounded-full border border-border px-4 py-2 text-sm font-semibold focus-visible:outline-2 focus-visible:outline-primary disabled:opacity-50">Modifier</button><button disabled={busy} type="button" onClick={()=>void remove(row)} className="min-h-11 rounded-full px-3 py-2 text-sm underline disabled:opacity-50">Supprimer</button></div></li>)}</ul>
   </div>}
  </div>
 }

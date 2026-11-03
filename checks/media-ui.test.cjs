@@ -1,6 +1,8 @@
 require('./register.cjs')
 const {JSDOM}=require('jsdom'),{test,afterEach}=require('node:test'),assert=require('node:assert/strict')
 const dom=new JSDOM('<div id="root"></div>',{url:'https://beer.test'})
+let scrolledTo=null
+dom.window.HTMLElement.prototype.scrollIntoView=function(){scrolledTo=this}
 global.window=dom.window;global.document=dom.window.document;global.HTMLElement=dom.window.HTMLElement;global.IS_REACT_ACT_ENVIRONMENT=true
 const React=require('react'),{act}=React,{createRoot}=require('react-dom/client')
 const api=require('../lib/media-library.ts')
@@ -52,4 +54,16 @@ test('Atelier : accès en ligne et téléchargement distincts',async()=>{
 test('Atelier : les liens privés ne sont pas chargés sans connexion',async()=>{
  const appApi=require('../lib/application-links.ts');let fetched=0;appApi.listApplicationLinks=async()=>{fetched++;return []}
  const {AppCatalog}=require('../components/media/app-catalog.tsx');await mount(AppCatalog,{connected:false});assert.equal(fetched,0)
+})
+
+test('Modifier affiche le média choisi et ramène le focus et le défilement au formulaire, même au second clic',async()=>{
+ admin=true;records=[row];await mount(MediaAdmin,{});await click('Gérer les médias')
+ for(let attempt=0;attempt<2;attempt++){
+  scrolledTo=null;await click('Modifier')
+  const heading=document.querySelector('h3')
+  assert.equal(heading.textContent,'Modifier : Premier épisode')
+  assert.equal(document.activeElement,heading)
+  assert.equal(scrolledTo,heading)
+  assert.equal(document.querySelector('input[type="number"]').value,'1')
+ }
 })

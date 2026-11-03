@@ -1,7 +1,7 @@
 "use client"
 import { useEffect, useState } from 'react'
 import { PdfReader } from './pdf-reader'
-import { listMedia, mediaUrl, driveLinks, type MediaResource } from '@/lib/media-library'
+import { groupMedia, listMedia, mediaUrl, driveLinks, type MediaResource } from '@/lib/media-library'
 const action = {audio:'Écouter',video:'Regarder',pdf:'Lire',image:'Voir'}
 export function MediaItem({media}:{media:MediaResource}) {
  const [url,setUrl]=useState(''), [busy,setBusy]=useState(false), [error,setError]=useState('')
@@ -50,6 +50,6 @@ export function MediaShelf({collection,connected,onConnect,hideWhenEmpty=false}:
  if(!rows.length && hideWhenEmpty)return null
  return <div className="mt-3 space-y-3">
   {collection==='podcasts'&&<p className="text-sm text-muted-foreground">{rows.length} épisode{rows.length>1?'s':''} disponible{rows.length>1?'s':''} sur 12</p>}
-  {!rows.length?<p className="text-sm text-muted-foreground">{collection==='podcasts'?'Les épisodes seront disponibles dès leur ajout.':'Le contenu sera disponible dès son ajout.'}</p>:rows.map(row=><MediaItem key={row.id} media={row}/>)}
+  {!rows.length?<p className="text-sm text-muted-foreground">{collection==='podcasts'?'Les épisodes seront disponibles dès leur ajout.':'Le contenu sera disponible dès son ajout.'}</p>:groupMedia(rows).map(group=><section key={group.kind} className="space-y-3">{groupMedia(rows).length>1&&<h4 className="pt-2 font-serif text-lg font-semibold">{group.label}</h4>}{group.items.map(row=><MediaItem key={row.id} media={row}/>)}</section>)}
  </div>
 }

@@ -9,6 +9,15 @@ export type MediaResource = {
  id: string; collection: string; title: string; description: string; kind: 'audio'|'video'|'pdf'|'image';
  position: number; published: boolean; storage_path: string|null; drive_url: string|null; file_name: string|null; size_bytes: number|null
 }
+export const mediaKinds = [
+ ['audio','Audios'], ['video','Films et vidéos'], ['pdf','Livres et documents PDF'], ['image','Images'],
+] as const
+export function groupMedia(rows: readonly MediaResource[]) {
+ return mediaKinds.map(([kind,label])=>({kind,label,items:rows.filter(row=>row.kind===kind).sort((a,b)=>a.position-b.position)})).filter(group=>group.items.length>0)
+}
+export function sortAdminMedia(rows: readonly MediaResource[]) {
+ return collections.flatMap(([collection])=>groupMedia(rows.filter(row=>row.collection===collection)).flatMap(group=>group.items))
+}
 export type MediaInput = Omit<MediaResource,'id'>
 export const MAX_MEDIA_BYTES = 50 * 1024 * 1024
 export function validateMediaFile(file: File, kind: MediaResource['kind']) {
