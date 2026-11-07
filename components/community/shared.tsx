@@ -37,7 +37,7 @@ export function sectionsForUniverse(universe: Universe) {
     grenier: ["Les chansons", "Les paroles"],
     kerhuon: ["Arrivée et départ", "Équipements et dépannage", "Astuces maison"],
     legendes: ["Films qu’on aime", "Podcasts qu’on aime", "La boîte à anecdotes"],
-    avenir: ["Projets communs", "Agenda familial"],
+    avenir: ["La Route du Houblon", "Projets communs", "Agenda familial"],
   }
   return ["Contributions générales", ...sections[universe]]
 }
