@@ -1,10 +1,15 @@
-import { familyRequest } from '../family-auth'
+import { familyRequest, getValidSession } from '../family-auth'
 import { DEFAULT_SETTINGS, type Snapshot, type Settings, validateSnapshot } from './model'
 export async function loadRace() {
- const [snapshots,settings]=await Promise.all([
-  familyRequest<Snapshot[]>('/rest/v1/race_snapshots?select=*&order=covered_date.asc,kind.desc'),
+ const session=await getValidSession()
+ const [response,finals,settings]=await Promise.all([
+  fetch('/api/houblon/google-sheet',{headers:{Authorization:`Bearer ${session.access_token}`},cache:'no-store',signal:AbortSignal.timeout(45000)}),
+  familyRequest<Snapshot[]>('/rest/v1/race_snapshots?select=*&kind=eq.final'),
   familyRequest<Settings[]>('/rest/v1/race_settings?select=*&id=eq.1')])
- const s=settings[0];return {snapshots:snapshots.map(validateSnapshot),settings:s?.revision?s:{...DEFAULT_SETTINGS,revision:s?.revision||0}}
+ const data=await response.json()
+ if(!response.ok)throw Error(data.error||'Lecture du tableur impossible.')
+ const s=settings[0];return {snapshots:[...data.snapshots,...finals].map(validateSnapshot),settings:s?.revision?s:{...DEFAULT_SETTINGS,revision:s?.revision||0}}
+
 }
 export function publishSnapshot(s:Snapshot,revision:number){
  validateSnapshot(s)
