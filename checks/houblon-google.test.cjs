@@ -14,3 +14,18 @@ test('authenticated Google route sends only public ranges and returns sanitized 
  global.fetch=async url=>{urls.push(url);if(url.endsWith('/user'))return Response.json({id:'member'});if(url.endsWith('is_family_member'))return Response.json(true);if(url.includes('oauth2'))return Response.json({access_token:'secret'});return Response.json({valueRanges:f.map(values=>({values}))})};
  try{const response=await GET(new Request('http://localhost',{headers:{authorization:'Bearer test'}}));assert.equal(response.status,200);assert.match(response.headers.get('cache-control'),/no-store/);const data=await response.json();assert.equal(data.snapshots.length,1);assert.ok(!JSON.stringify(data).includes('secret'));const ranges=new URL(urls.at(-1)).searchParams.getAll('ranges');assert.deepEqual(ranges,['EXPORT_PUBLIC!A1:L53','PARAMETRES!B19:B34','PUBLICATION!A1:B13'])}finally{global.fetch=original;global.Date=RealDate;for(const k of ['GOOGLE_SERVICE_ACCOUNT_EMAIL','GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY','NEXT_PUBLIC_SUPABASE_URL','NEXT_PUBLIC_SUPABASE_ANON_KEY']){if(env[k]===undefined)delete process.env[k];else process.env[k]=env[k]}}
 })
+test('test mode requires admin, isolated configured sheet, permits future dates only there',async()=>{
+ const {GET}=require('../app/api/houblon/google-sheet/route.ts'),{generateKeyPairSync}=require('node:crypto');const oldFetch=global.fetch,OldDate=Date,env={...process.env},calls=[];
+ Object.assign(process.env,{NEXT_PUBLIC_SUPABASE_URL:'https://test.supabase.co',NEXT_PUBLIC_SUPABASE_ANON_KEY:'test',GOOGLE_SERVICE_ACCOUNT_EMAIL:'test@example.com',GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY:generateKeyPairSync('rsa',{modulusLength:2048}).privateKey.export({type:'pkcs8',format:'pem'}),HOUBLON_SPREADSHEET_ID:'real-sheet',HOUBLON_TEST_SPREADSHEET_ID:'test-sheet'});
+ let admin=false;global.Date=class extends OldDate{constructor(...args){super(...(args.length?args:['2026-11-07T12:00:00Z']))}static now(){return new OldDate('2026-11-07T12:00:00Z').getTime()}};
+ global.fetch=async url=>{calls.push(url);if(url.endsWith('/user'))return Response.json({id:'u'});if(url.endsWith('is_family_member'))return Response.json(true);if(url.endsWith('is_media_admin'))return Response.json(admin);if(url.includes('oauth2'))return Response.json({access_token:'secret'});return Response.json({valueRanges:fixture().map(values=>({values}))})};
+ const req=mode=>new Request('http://localhost/api/houblon/google-sheet'+mode,{headers:{authorization:'Bearer test'}});
+ try{
+  assert.equal((await GET(req('?mode=test'))).status,403);assert.ok(!calls.some(u=>u.includes('googleapis')));
+  admin=true;delete process.env.HOUBLON_TEST_SPREADSHEET_ID;assert.equal((await GET(req('?mode=test'))).status,503);
+  process.env.HOUBLON_TEST_SPREADSHEET_ID='real-sheet';assert.equal((await GET(req('?mode=test'))).status,409);
+  process.env.HOUBLON_TEST_SPREADSHEET_ID='test-sheet';calls.length=0;
+  const test=await (await GET(req('?mode=test'))).json();assert.equal(test.mode,'test');assert.equal(test.snapshots.length,1);assert.ok(calls.at(-1).includes('/test-sheet/'));assert.match(test.snapshots[0].note,/TEST/);
+  calls.length=0;const real=await (await GET(req(''))).json();assert.equal(real.mode,'production');assert.equal(real.snapshots.length,0);assert.ok(calls.at(-1).includes('/real-sheet/'));
+ }finally{global.fetch=oldFetch;global.Date=OldDate;for(const k of Object.keys(process.env)){if(!(k in env))delete process.env[k]}Object.assign(process.env,env)}
+})

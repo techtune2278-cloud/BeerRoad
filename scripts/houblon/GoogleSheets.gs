@@ -1,5 +1,5 @@
 /** À coller dans Extensions > Apps Script du Google Sheets maître. */
-const HOUBLON_ID='1Ku7l9K3S6NYaywNh85EKKRqrHYk3IWApsM4vlpPCpcc';
+const HOUBLON_ID='1jJMW7juxDDE1GK5-qxWmZimF-ugiEjDTAAeDx3rp6rw';
 function classeurHoublon(){const s=SpreadsheetApp.getActiveSpreadsheet();if(s.getId()!==HOUBLON_ID)throw Error('Ouvrir le classeur maître prévu.');return s;}
 function installerPublication(){
  const s=classeurHoublon();if(s.getSheetByName('PUBLICATION'))throw Error('PUBLICATION existe déjà : aucune modification.');
@@ -11,7 +11,7 @@ function installerPublication(){
 }
 function verifierLiaisonFormulaire(){
  const f=FormApp.openById('1vMCxGNsFMiYxwWTqpQR2ckYw2KxDJVn0qpJoMHLZhKk');
- SpreadsheetApp.getUi().alert((f.getDestinationId()===HOUBLON_ID?'OK : réponses reliées au classeur maître.':'ATTENTION : destination différente ou absente. Vérifier Réponses > Associer à Sheets.')+'\nCela ne remplit pas automatiquement les onglets de calcul.\nLien répondant : '+f.getPublishedUrl());
+ console.log((f.getDestinationId()===HOUBLON_ID?'OK : réponses reliées au classeur maître.':'ATTENTION : destination différente ou absente. Vérifier Réponses > Associer à Sheets.')+'\nCela ne remplit pas automatiquement les onglets de calcul.\nLien répondant : '+f.getPublishedUrl());
 }
 function appliquerBaremeV6(){
  const s=classeurHoublon(),p=s.getSheetByName('PARAMETRES'),a=s.getSheetByName('ACTIONS'),c=s.getSheetByName('CALCULS');
@@ -32,7 +32,7 @@ function appliquerBaremeV6(){
  p.getRange('A83').setValue('Mission gagnée : 20 points ; deux ex æquo : 10 points chacun.');
  p.getRange('B66:B69').setValues([[40],[30],[50],[2500]]);
  a.getRange('F6:F305').setFormulas(actions.map((r,i)=>[r[0].replace('D'+(i+6)+'*3','D'+(i+6)+'*BAREME_V6!$B$3')]));
- c.getRange('K65:K112').setFormulas(bonuses.map(r=>['=MIN(BAREME_V6!$B$2,'+r[0].slice(1)+')']));
+ c.getRange('K65:K112').setFormulas(bonuses.map(r=>['=MIN(BAREME_V6!$B$2'+(r[0].includes(';')?';':',')+r[0].slice(1)+')']));
  // Les bonus déjà attribués restent intacts : contrôle manuel obligatoire de ces lignes.
  let existants=0;
  for(let row=87;row<=150;row++){
@@ -41,5 +41,5 @@ function appliquerBaremeV6(){
   else if(row>=127)p.getRange(row,4).setValue([10,5,2][(row-127)%3]);
  }
  SpreadsheetApp.flush();
- SpreadsheetApp.getUi().alert('Barème installé. '+existants+' bonus déjà attribués conservés : contrôler leurs points manuellement. Vérifier les scores avant de publier. Les limites de playlists et preuves restent contrôlées par le QG.');
+ console.log('Barème installé. '+existants+' bonus déjà attribués conservés : contrôler leurs points manuellement. Vérifier les scores avant de publier. Les limites de playlists et preuves restent contrôlées par le QG.');
 }
