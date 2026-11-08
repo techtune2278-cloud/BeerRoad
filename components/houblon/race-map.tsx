@@ -1,14 +1,26 @@
 "use client"
 import { COLORS, TEAM_NAMES, START, dateLabel, number, rank, type Snapshot } from '@/lib/houblon/model'
 const periods=[['04–17 janvier','2027-01-04','2027-01-17'],['18–31 janvier','2027-01-18','2027-01-31'],['01–14 février','2027-02-01','2027-02-14'],['15–28 février','2027-02-15','2027-02-28']]
-function Boat({x,y,color,ghost=false}:{x:number;y:number;color:string;ghost?:boolean}){return <g transform={`translate(${x} ${y})`} opacity={ghost?.23:1}><path d="M-22 9H25L15 22H-12Z" fill={color}/><path d="M0 -35V6H-24Z" fill={color}/><path d="M4 -29L23 6H4Z" fill={color} opacity=".7"/><path d="M1 -38V9" stroke={color} strokeWidth="2"/></g>}
+// Two separate hulls, a connecting deck and one L-shaped foil per hull.
+function Boat({x,y,color,ghost=false}:{x:number;y:number;color:string;ghost?:boolean}){
+ return <g transform={`translate(${x} ${y})`} opacity={ghost?.23:1}>
+  <path d="M-20 9L16 7L22 12L-16 16Z" fill={color} opacity=".32"/>
+  <path d="M-16 8L-13 19M12 7L17 18" fill="none" stroke={color} strokeWidth="2.5"/>
+  <path d="M-25 7Q-6 3 24 6L19 12Q-4 11-21 14Z" fill={color} opacity=".75"/>
+  <path d="M-24 17Q-4 13 27 16L21 23Q0 21-19 25Z" fill={color}/>
+  <path d="M-13 11L-16 23L-27 26M14 20L17 28L28 25" fill="none" stroke={color} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
+  <path d="M0 -35Q-4-13-22 3L0 1Z" fill={color}/>
+  <path d="M4 -28Q16-12 23 2L4 1Z" fill={color} opacity=".7"/>
+  <path d="M1 -38V15" stroke={color} strokeWidth="2" strokeLinecap="round"/>
+ </g>
+}
 export function RaceMap({snapshot,previous,ceiling}:{snapshot:Snapshot;previous?:Snapshot;ceiling:number}){
  const max=Math.max(100,ceiling),x=(v:number)=>130+Math.min(1,v/max)*610
  const day=Math.min(56,Math.max(0,Math.floor((Date.parse(snapshot.covered_date)-Date.parse(START))/86400000)+1))
  return <section className="race-chart" aria-label="Positions des quatre équipages">
   <div className="race-chart-top"><div><span className="race-eyebrow">{snapshot.kind==='final'?'Brouillard levé':'La flotte · classement visible'}</span><h2>{dateLabel(snapshot.covered_date)}</h2></div><span className="race-day">Jour {day} / 56</span></div>
   <svg className="race-ocean" viewBox="0 0 960 430" role="img" aria-labelledby="race-map-title race-map-description">
-   <title id="race-map-title">{`Positions en points ${snapshot.kind==='final'?'finaux':'publics'}`}</title><desc id="race-map-description">Les points déterminent la position horizontale. Les quatre lignes identifient les équipages. Les silhouettes claires indiquent le relevé précédent. Les chiffres détaillés figurent sous la carte.</desc>
+   <title id="race-map-title">{`Positions en points ${snapshot.kind==='final'?'finaux':'publics'}`}</title><desc id="race-map-description">Les points déterminent la position horizontale. Les quatre lignes identifient les équipages. Les catamarans portent deux coques et deux foils. Les silhouettes claires indiquent le relevé précédent. Les chiffres détaillés figurent sous la carte.</desc>
    <defs><linearGradient id={`sea-${snapshot.covered_date}`} x2="0" y2="1"><stop stopColor="#e6f1ef"/><stop offset="1" stopColor="#cce3e9"/></linearGradient><pattern id={`grid-${snapshot.covered_date}`} width="65" height="55" patternUnits="userSpaceOnUse"><path d="M65 0H0V55" fill="none" stroke="#1c5264" strokeOpacity=".08"/></pattern></defs>
    <rect width="960" height="430" rx="18" fill={`url(#sea-${snapshot.covered_date})`}/><rect width="960" height="430" rx="18" fill={`url(#grid-${snapshot.covered_date})`}/>
    <path d="M0 0H95L75 32L103 52L67 90L84 127L48 148L63 193L29 220L40 260L0 280Z" fill="#dddcc8"/><path d="M0 0H95L75 32L103 52L67 90L84 127L48 148L63 193L29 220L40 260" fill="none" stroke="#b8bfa7"/>
