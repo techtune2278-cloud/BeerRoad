@@ -14,6 +14,26 @@ function Boat({x,y,color,ghost=false}:{x:number;y:number;color:string;ghost?:boo
   <path d="M1 -38V15" stroke={color} strokeWidth="2" strokeLinecap="round"/>
  </g>
 }
+/** Waiting scene only: no invented report, points or ranking. */
+export function RaceHarbor(){
+ return <section className="race-chart race-harbor" aria-labelledby="race-harbor-title">
+  <div className="race-chart-top"><div><span className="race-eyebrow">Ker Huon · Port d’attache</span><h2 id="race-harbor-title">Les équipages sont au port</h2></div><span className="race-day">Avant le départ</span></div>
+  <div className="race-harbor-water"><div className="race-harbor-quay" aria-hidden="true">LA ROUTE DU HOUBLON</div>
+   <div className="race-harbor-berths">{TEAM_NAMES.map((team,i)=><article className="race-harbor-berth" key={team}>
+    <svg viewBox="0 0 180 130" role="img" aria-label={`Catamaran à deux foils de ${team}, amarré au port`}>
+     <path d="M26 0V100" stroke="#b7ad92" strokeWidth="13" strokeLinecap="round"/>
+     <path d="M22 5V93" stroke="#e4dfce" strokeWidth="2" strokeDasharray="2 9"/>
+     <circle cx="27" cy="37" r="3" fill="#536762"/><circle cx="27" cy="86" r="3" fill="#536762"/>
+     <path d="M27 37L74 78M27 86L76 89" stroke="#657f76" strokeWidth="1.3" fill="none"/>
+     <path d="M62 112Q76 108 90 112T118 112M126 45Q135 42 144 45M135 96Q144 93 153 96" stroke="#72a5b0" strokeOpacity=".45" strokeWidth="1.5" fill="none"/>
+     <Boat x={100} y={73} color={COLORS[i]}/>
+    </svg>
+    <h3><span style={{background:COLORS[i]}} aria-hidden="true"/>{team}</h3><p>Prêt à larguer les amarres</p>
+   </article>)}</div>
+  </div>
+  <p className="race-caption">Départ le 4 janvier 2027. Premier relevé prévu le vendredi 8 janvier. Les positions en course apparaîtront dès la publication du premier relevé.</p>
+ </section>
+}
 export function RaceMap({snapshot,previous,ceiling}:{snapshot:Snapshot;previous?:Snapshot;ceiling:number}){
  const max=Math.max(100,ceiling),x=(v:number)=>130+Math.min(1,v/max)*610
  const day=Math.min(56,Math.max(0,Math.floor((Date.parse(snapshot.covered_date)-Date.parse(START))/86400000)+1))
