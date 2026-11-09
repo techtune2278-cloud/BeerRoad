@@ -21,3 +21,13 @@ test('pagination et accès direct au résultat',async()=>{
  await render({onResult:r=>selected=r});await settle();await act(async()=>[...document.querySelectorAll('button')].find(b=>b.textContent.includes('Voir plus')).click());await settle();assert.deepEqual(offsets,[0,30]);await act(async()=>[...document.querySelectorAll('button')].find(b=>b.textContent.startsWith('Suite')).click());assert.equal(selected.title,'Suite')
 })
 test('déconnexion : les résultats privés disparaissent',async()=>{api.searchResources=async()=>({items:[row('Privé')],more:false});await render();await settle();await render({connected:false});assert.ok(!document.body.textContent.includes('Privé'))})
+test('Houblon, classement et chansons ouvrent le QG sans résultat vide',async()=>{
+ assert.equal(api.searchNavigation('houblon')[0].href,'/qg')
+ assert.equal(api.searchNavigation('catamarans classement')[0].href,'/qg')
+ assert.equal(api.searchNavigation('Vendredi après-midi',true)[0].href,'/qg')
+ assert.equal(api.searchNavigation('Vendredi après-midi',false).length,0)
+ api.searchResources=async()=>({items:[],more:false})
+ await render({query:'Houblon'});await settle()
+ assert.equal(document.querySelector('a[href="/qg"]').textContent.includes('Houblon'),true)
+ assert.ok(!document.body.textContent.includes('Aucun résultat'))
+})

@@ -1,6 +1,6 @@
 "use client"
 import { useEffect,useRef,useState } from 'react'
-import { searchResources,type ResourceResult } from '@/lib/resource-search'
+import { searchResources,searchNavigation,type ResourceResult } from '@/lib/resource-search'
 import type { Plaque,Universe } from '@/src/data/beerRoadData'
 import type { MediaResource } from '@/lib/media-library'
 import type { CommunityPost,FamilyEvent } from '@/lib/family-api'
@@ -8,6 +8,7 @@ import { MediaItem } from './media/media-shelf'
 import { PostMedia } from './community/post-media'
 export function ResourceSearch({query,connected,matches,onUniverse,onResult}:{query:string;connected:boolean;matches:Plaque[];onUniverse:(plaque:Plaque)=>void;onResult:(result:ResourceResult)=>void}) {
  const [rows,setRows]=useState<ResourceResult[]>([]),[more,setMore]=useState(false),[busy,setBusy]=useState(false),[error,setError]=useState(''),[attempt,setAttempt]=useState(0)
+ const navigation=searchNavigation(query,connected)
  const generation=useRef(0)
  useEffect(()=>{
   const current=++generation.current;setRows([]);setMore(false);setError('');setBusy(connected&&query.trim().length>=2)
@@ -17,13 +18,14 @@ export function ResourceSearch({query,connected,matches,onUniverse,onResult}:{qu
  },[query,connected,attempt])
  async function next(){const current=generation.current;setBusy(true);setError('');try{const data=await searchResources(query,rows.length);if(current===generation.current){setRows(old=>[...old,...data.items]);setMore(data.more)}}catch{if(current===generation.current)setError('La suite des résultats n’a pas pu être chargée.')}finally{if(current===generation.current)setBusy(false)}}
  return <div className="absolute left-0 right-0 top-full z-30 mt-2 max-h-[65vh] overflow-y-auto rounded-2xl border bg-popover p-2 text-left shadow-xl" aria-label="Résultats de recherche">
+  {navigation.map(item=><a key={item.href} href={item.href} className="block rounded-xl px-3 py-3 hover:bg-secondary"><span className="block text-sm font-semibold">{item.title}</span><span className="block text-xs text-muted-foreground">{item.description}</span></a>)}
   {matches.map(p=><button type="button" key={p.id} onClick={()=>onUniverse(p)} className="block w-full rounded-xl px-3 py-2 text-left hover:bg-secondary"><span className="font-semibold">{p.emoji} {p.name}</span><span className="block text-xs text-muted-foreground">Univers</span></button>)}
   {connected&&rows.map(row=><button type="button" key={`${row.kind}-${row.payload.id}`} onClick={()=>onResult(row)} className="block w-full rounded-xl px-3 py-3 text-left hover:bg-secondary"><span className="block text-sm font-semibold">{row.title}</span><span className="block text-xs text-muted-foreground">{{media:'Ressource',post:'Contribution',event:'Agenda'}[row.kind]} · {row.section}</span><span className="mt-1 line-clamp-2 block text-xs text-muted-foreground">{row.description}</span></button>)}
   {busy&&<p role="status" className="p-3 text-sm">Recherche dans les contenus…</p>}
   {error&&<p role="alert" className="p-3 text-sm">{error} <button onClick={()=>setAttempt(n=>n+1)} className="underline">Réessayer</button></p>}
   {!connected&&<p className="p-3 text-sm text-muted-foreground">Connecte-toi dans le carnet pour rechercher aussi les tutos, podcasts et contributions privés.</p>}
   {connected&&query.trim().length<2&&<p className="p-3 text-sm">Saisis au moins deux caractères pour rechercher dans les contenus.</p>}
-  {connected&&query.trim().length>=2&&!busy&&!error&&!rows.length&&!matches.length&&<p className="p-3 text-sm">Aucun résultat. Essaie un autre mot.</p>}
+  {connected&&query.trim().length>=2&&!busy&&!error&&!rows.length&&!matches.length&&!navigation.length&&<p className="p-3 text-sm">Aucun résultat. Essaie un autre mot.</p>}
   {more&&<button disabled={busy} onClick={()=>void next()} className="p-3 text-sm underline">Voir plus de résultats</button>}
  </div>
 }
