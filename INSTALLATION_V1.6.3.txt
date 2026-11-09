@@ -1,0 +1,32 @@
+BEER ROAD V1.6.3 - CATAMARANS A DEUX FOILS
+Mise à jour à appliquer sur la V1.6.2 déjà installée.
+
+1. Décompresser ce ZIP dans un dossier temporaire.
+2. Copier components, public, package.json et package-lock.json dans :
+   C:\Techtune\Devt\Beer Road
+   Accepter le remplacement des quatre fichiers concernés.
+   Ne pas remplacer le projet entier par ce ZIP : c'est une mise à jour partielle.
+3. Dans l'invite de commandes Windows (CMD), exécuter :
+
+cd /d "C:\Techtune\Devt\Beer Road"
+npm test
+npm run build
+
+Si les deux contrôles réussissent :
+
+git add components/houblon/race-map.tsx public/sw.js package.json package-lock.json
+git commit -m "Beer Road V1.6.3 : catamarans a deux foils"
+git push
+
+4. Attendre le déploiement Vercel Ready, puis actualiser Beer Road.
+5. Vérifier V1.6.3 et les catamarans sur /qg/test, sur PC et smartphone.
+   La même carte équipe la page réelle /qg lors des relevés publiés.
+
+Aucune nouvelle dépendance. Aucune variable Vercel à modifier.
+Aucune modification du tableur, du formulaire, des points ou des droits.
+Les silhouettes claires du relevé précédent sont aussi des catamarans.
+Le logo officiel de la course est conservé.
+
+Validation locale : tests automatisés et compilation de production réussis ;
+silhouettes SVG contrôlées visuellement. La vérification sur le site Vercel
+reste à faire après votre déploiement.

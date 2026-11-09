@@ -1,0 +1,34 @@
+BEER ROAD V1.6.4 - LES CATAMARANS AU PORT
+Mise à jour cumulative pour V1.6.2 ou V1.6.3.
+
+AVANT LE DEPART
+Les quatre catamarans à deux foils sont amarrés à leur ponton, avec les noms
+et couleurs des équipages. Quatre places sur PC, deux par ligne sur smartphone.
+La scène apparaît avant le 4 janvier 2027 quand aucun relevé n'est publié.
+Aucun score fictif n'est créé. Une erreur de connexion reste affichée comme telle.
+Après le départ, en l'absence de relevé, le texte indique l'attente du pointage.
+Dès qu'un relevé est publié, la carte des positions prend le relais.
+
+INSTALLATION
+1. Décompresser ce ZIP dans un dossier temporaire.
+2. Copier son contenu dans C:\Techtune\Devt\Beer Road, en fusionnant les dossiers
+   et en acceptant les remplacements. Ne pas supprimer le projet existant :
+   ce ZIP ne contient que les fichiers de mise à jour.
+3. Dans l'invite de commandes Windows (CMD) :
+
+cd /d "C:\Techtune\Devt\Beer Road"
+npm run build
+
+Si la compilation réussit :
+
+git add components/houblon/race-map.tsx components/houblon/race-page.tsx app/qg/race.css public/sw.js package.json package-lock.json
+git commit -m "Beer Road V1.6.4 : les catamarans au port"
+git push
+
+4. Attendre le déploiement Vercel Ready, puis actualiser le site.
+5. Ouvrir /qg (la page réelle) avant le départ : les quatre bateaux sont au port.
+   /qg/test conserve les positions fictives déjà validées dans vos essais.
+
+Aucune variable Vercel à modifier, aucune dépendance ajoutée.
+Ne pas publier un relevé de test dans le vrai tableur pour afficher le port.
+Le logo de la course, les calculs et les droits d'accès restent inchangés.

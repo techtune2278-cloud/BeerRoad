@@ -1,6 +1,6 @@
 // Narrow read-only XLSX reader. No formula execution, no upload of the workbook.
 // ZIP/XML limits protect the browser; encrypted, macro-enabled and ZIP64 files are refused.
-import { DATES, END, TEAM_NAMES, validateSnapshot, type Snapshot, type Score } from './model'
+import { DATES, END, TEAM_NAMES, normalizeTeamName, validateSnapshot, type Snapshot, type Score } from './model'
 const MAX_XML=12*1024*1024
 async function unzip(buffer: ArrayBuffer) {
  const b=new Uint8Array(buffer),d=new DataView(buffer),decoder=new TextDecoder();let end=-1
@@ -76,6 +76,6 @@ export async function readRaceWorkbook(buffer:ArrayBuffer):Promise<{snapshots:Sn
  let final:Snapshot|null=null
  const rel=await sheet('RELEVES');let validFinal=0
  for(let r=6;r<=605;r++)if(rel('A'+r)==='Arrivée'&&rel('M'+r)==='OK')validFinal++
- if(validFinal===40){const c=await sheet('CALCULS');const scores=TEAM_NAMES.map((team,i)=>{const r=109+i;const n=(col:string)=>{const v=c(col+r);return typeof v==='number'?v:NaN};if(c('B'+r)!==team)throw Error('Ordre des équipages incohérent.');return {team,listens:n('G'),audience:n('H'),subscribers:n('I'),bonuses:n('K'),total:n('L')}});final=validateSnapshot({covered_date:END,label:'Classement final — brouillard levé',kind:'final',scores,divisor,mission_points,revision:0,note:''})}
+ if(validFinal===40){const c=await sheet('CALCULS');const scores=TEAM_NAMES.map((team,i)=>{const r=109+i;const n=(col:string)=>{const v=c(col+r);return typeof v==='number'?v:NaN};if(normalizeTeamName(String(c('B'+r)))!==team)throw Error('Ordre des équipages incohérent.');return {team,listens:n('G'),audience:n('H'),subscribers:n('I'),bonuses:n('K'),total:n('L')}});final=validateSnapshot({covered_date:END,label:'Classement final — brouillard levé',kind:'final',scores,divisor,mission_points,revision:0,note:''})}
  return {snapshots,final,warnings}
 }

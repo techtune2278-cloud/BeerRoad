@@ -13,3 +13,32 @@ test('refuse équipage dupliqué et date incohérente',async()=>{await assert.re
 test('refuse fichier non ZIP ou trop gros',async()=>{await assert.rejects(()=>readRaceWorkbook(new ArrayBuffer(12)));await assert.rejects(()=>readRaceWorkbook(new ArrayBuffer(9*1024*1024)))})
 test('ex æquo partagent leur rang et validation rejette NaN',()=>{assert.equal(rank([{total:20},{total:10},{total:10}],10),2);assert.throws(()=>validateSnapshot({covered_date:DATES[0],kind:'public',label:'test',note:'',divisor:5,mission_points:20,scores:TEAM_NAMES.map(team=>({team,listens:NaN,audience:0,subscribers:0,bonuses:0,total:0}))}))})
 if(process.env.RACE_REAL_XLSX)test('le vrai classeur V5 vide ne publie aucun faux zéro',async()=>{const b=fs.readFileSync(process.env.RACE_REAL_XLSX);const x=await readRaceWorkbook(b.buffer.slice(b.byteOffset,b.byteOffset+b.byteLength));assert.equal(x.snapshots.length,0);assert.equal(x.final,null);assert.equal(x.warnings.length,12)})
+test('ancien et nouveau nom identifient le même équipage sans doubler les scores',()=>{
+ const {DEMO_SNAPSHOTS,normalizeSettings,storedTeamName,DEFAULT_SETTINGS}=require('../lib/houblon/model.ts')
+ const old=structuredClone(DEMO_SNAPSHOTS[0]);old.scores[0].team='Alexis & Marie'
+ assert.equal(validateSnapshot(old).scores[0].team,'Marie & Alexis')
+ assert.equal(old.scores[0].team,'Alexis & Marie')
+ const duplicate=structuredClone(old);duplicate.scores[1].team='Marie & Alexis'
+ assert.throws(()=>validateSnapshot(duplicate),/quatre équipages/)
+ const settings=structuredClone(DEFAULT_SETTINGS);settings.links[0].team='Alexis & Marie';settings.links[0].youtube='https://youtube.com/watch?v=existing'
+ const result=normalizeSettings(settings)
+ assert.equal(result.links[0].team,'Marie & Alexis');assert.equal(result.links[0].youtube,settings.links[0].youtube)
+ assert.equal(storedTeamName(result.links[0].team),'Alexis & Marie')
+})
+test('importe aussi un ancien classeur avec Alexis en premier',async()=>{
+ const x=await readRaceWorkbook(fixture(c=>c.C6='Alexis & Marie'))
+ assert.equal(x.snapshots[0].scores[0].team,'Marie & Alexis')
+})
+test('secondes chansons attribuées, réglages anciens et liens préservés',()=>{
+ const {DEFAULT_SETTINGS,normalizeSettings,SECOND_SONGS}=require('../lib/houblon/model.ts')
+ assert.deepEqual(DEFAULT_SETTINGS.links.map(r=>r.song2),Object.values(SECOND_SONGS))
+ const settings=structuredClone(DEFAULT_SETTINGS)
+ settings.links.forEach(r=>{r.song2='Seconde chanson à attribuer';r.spotify2='https://open.spotify.com/track/example'})
+ settings.links[0].team='Alexis & Marie'
+ const result=normalizeSettings(settings)
+ assert.deepEqual(result.links.map(r=>r.song2),Object.values(SECOND_SONGS))
+ assert.ok(result.links.every(r=>r.spotify2==='https://open.spotify.com/track/example'))
+ settings.links[0].song2='Titre corrigé par le QG'
+ assert.equal(normalizeSettings(settings).links[0].song2,'Titre corrigé par le QG')
+ assert.doesNotMatch(fs.readFileSync(require('node:path').join(__dirname,'../components/houblon/race-page.tsx'),'utf8'),/Liens à venir/)
+})
