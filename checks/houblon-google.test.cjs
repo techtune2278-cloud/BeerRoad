@@ -29,3 +29,10 @@ test('test mode requires admin, isolated configured sheet, permits future dates 
   calls.length=0;const real=await (await GET(req(''))).json();assert.equal(real.mode,'production');assert.equal(real.snapshots.length,0);assert.ok(calls.at(-1).includes('/real-sheet/'));
  }finally{global.fetch=oldFetch;global.Date=OldDate;for(const k of Object.keys(process.env)){if(!(k in env))delete process.env[k]}Object.assign(process.env,env)}
 })
+
+test('final Google report is hidden until after arrival, then labelled final',()=>{
+ const f=fixture();f[2]=[['Date','Publier'],['2027-02-28','Oui']];
+ TEAM_NAMES.forEach((team,i)=>f[0][49+i]=['Arrivée','2027-02-28',team,10,20,3,20,53,1,0,0,'Complet']);
+ assert.equal(parseGoogleRace(...f,'2027-02-28').length,0);
+ assert.equal(parseGoogleRace(...f,'2027-03-01')[0].kind,'final');
+})

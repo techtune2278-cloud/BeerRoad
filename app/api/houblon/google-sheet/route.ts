@@ -40,7 +40,7 @@ export async function GET(req:Request){
   const sheet=await request(url.href,{headers:{Authorization:'Bearer '+access_token}})
   if(!sheet.ok)throw Error('sheet')
   const {valueRanges}=await sheet.json()
-  const snapshots=parseGoogleRace(valueRanges[0].values||[],valueRanges[1].values||[],valueRanges[2].values||[],testMode?'2027-02-28':parisToday())
+  const snapshots=parseGoogleRace(valueRanges[0].values||[],valueRanges[1].values||[],valueRanges[2].values||[],testMode?'2027-03-01':parisToday())
   if(testMode)for(const snapshot of snapshots)snapshot.note='TEST — chiffres fictifs, visibles uniquement par l’administrateur.'
   return reply({mode:testMode?'test':'production',snapshots,checked_at:new Date().toISOString()})
  }catch{return reply({error:'Lecture Google Sheets impossible : vérifier le partage au compte de service, les trois onglets requis et les relevés autorisés. Les anciennes données éventuellement affichées ne sont pas à jour.'},502)}

@@ -9,11 +9,11 @@ export function parseGoogleRace(pub:Grid, params:Grid, approvals:Grid, today:str
  if(expected.some((v,i)=>pub[4]?.[i]!==v))throw Error('Format EXPORT_PUBLIC non reconnu.')
  const allowed=new Set(approvals.slice(1).filter(r=>r[1]==='Oui').map(r=>date(r[0])))
  return DATES.flatMap((covered_date,i)=>{
-  if(covered_date>today||!allowed.has(covered_date))return []
+  if(covered_date>today||(covered_date===END&&today<=END)||!allowed.has(covered_date))return []
   const rows=pub.slice(5+i*4,9+i*4)
   if(rows.length!==4||rows.some(r=>r[11]!=='Complet'))throw Error('Relevé autorisé mais incomplet : '+covered_date)
   if(rows.some(r=>date(r[1])!==covered_date||r[0]!==rows[0][0]))throw Error('Bloc de relevé incohérent.')
   const num=(v:Cell)=>typeof v==='number'?v:NaN
-  return [validateSnapshot({covered_date,label:String(rows[0][0]),kind:'public',revision:0,note:'Source : Google Sheets · relevé validé par le QG.',divisor:num(params[0]?.[0]),mission_points:num(params[3]?.[0]),scores:rows.map(r=>({team:String(r[2]),listens:num(r[3]),audience:num(r[4]),subscribers:num(r[5]),bonuses:num(r[6]),total:num(r[7])}))})]
+  return [validateSnapshot({covered_date,label:String(rows[0][0]),kind:covered_date===END?'final':'public',revision:0,note:'Source : Google Sheets · relevé validé par le QG.',divisor:num(params[0]?.[0]),mission_points:num(params[3]?.[0]),scores:rows.map(r=>({team:String(r[2]),listens:num(r[3]),audience:num(r[4]),subscribers:num(r[5]),bonuses:num(r[6]),total:num(r[7])}))})]
  })
 }

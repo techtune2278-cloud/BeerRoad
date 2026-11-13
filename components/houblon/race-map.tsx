@@ -38,7 +38,7 @@ export function RaceMap({snapshot,previous,ceiling}:{snapshot:Snapshot;previous?
  const max=Math.max(100,ceiling),x=(v:number)=>130+Math.min(1,v/max)*610
  const day=Math.min(56,Math.max(0,Math.floor((Date.parse(snapshot.covered_date)-Date.parse(START))/86400000)+1))
  return <section className="race-chart" aria-label="Positions des quatre équipages">
-  <div className="race-chart-top"><div><span className="race-eyebrow">{snapshot.kind==='final'?'Brouillard levé':'La flotte · classement visible'}</span><h2>{dateLabel(snapshot.covered_date)}</h2></div><span className="race-day">Jour {day} / 56</span></div>
+  <div className="race-chart-top"><div><span className="race-eyebrow">{snapshot.kind==='final'?'Brume levé':'La flotte · classement visible'}</span><h2>{dateLabel(snapshot.covered_date)}</h2></div><span className="race-day">Jour {day} / 56</span></div>
   <svg className="race-ocean" viewBox="0 0 960 430" role="img" aria-labelledby="race-map-title race-map-description">
    <title id="race-map-title">{`Positions en points ${snapshot.kind==='final'?'finaux':'publics'}`}</title><desc id="race-map-description">Les points déterminent la position horizontale. Les quatre lignes identifient les équipages. Les catamarans portent deux coques et deux foils. Les silhouettes claires indiquent le relevé précédent. Les chiffres détaillés figurent sous la carte.</desc>
    <defs><linearGradient id={`sea-${snapshot.covered_date}`} x2="0" y2="1"><stop stopColor="#e6f1ef"/><stop offset="1" stopColor="#cce3e9"/></linearGradient><pattern id={`grid-${snapshot.covered_date}`} width="65" height="55" patternUnits="userSpaceOnUse"><path d="M65 0H0V55" fill="none" stroke="#1c5264" strokeOpacity=".08"/></pattern></defs>

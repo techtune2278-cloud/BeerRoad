@@ -8,7 +8,7 @@ export async function loadRace() {
   familyRequest<Settings[]>('/rest/v1/race_settings?select=*&id=eq.1')])
  const data=await response.json()
  if(!response.ok)throw Error(data.error||'Lecture du tableur impossible.')
- const s=settings[0];return {snapshots:[...data.snapshots,...finals].map(validateSnapshot),settings:normalizeSettings(s?.revision?s:{...DEFAULT_SETTINGS,revision:s?.revision||0})}
+ const s=settings[0];return {snapshots:[...data.snapshots.filter((row:Snapshot)=>!finals.some(final=>final.covered_date===row.covered_date&&final.kind===row.kind)),...finals].map(validateSnapshot),settings:normalizeSettings(s?.revision?s:{...DEFAULT_SETTINGS,revision:s?.revision||0})}
 
 }
 export function publishSnapshot(s:Snapshot,revision:number){
